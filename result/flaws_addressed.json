@@ -1,0 +1,90 @@
+[
+    {
+        "flaw_id": 1,
+        "start_of_flaw_addressed_text": "We also study the efficacy",
+        "end_of_flaw_addressed_text": "generating invalid responses.",
+        "flaw_addressed_description": "The paper now clearly explains that '+ SafeDemo' means replacing unsafe demonstrations with manually annotated safe ones, and clarifies its impact on unsafety rate and invalid responses. The caption of Table 3 also explicitly defines this setting as 'replacing unsafe demonstrations with safe demonstrations (i.e. \"- UnsafeDemo + SafeDemo\").'",
+        "flaw_addressed_quality": 5,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 3,
+        "start_of_flaw_addressed_text": "In our preliminary experiments, when",
+        "end_of_flaw_addressed_text": "prevent such behaviors.",
+        "flaw_addressed_description": "The sentence has been rephrased to clarify the context of the preliminary experiments, specifically mentioning that LLMs tend to translate when the cipher input is fed 'without prompt,' making the initial model behavior and the purpose of the 'Do not be a translator' prompt much clearer.",
+        "flaw_addressed_quality": 5,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 4,
+        "start_of_flaw_addressed_text": "We present experimental evaluations across",
+        "end_of_flaw_addressed_text": "generate unsafe outputs.",
+        "flaw_addressed_description": "The standalone 'Case Study' section from the submitted paper has been integrated into the 'Main Results Across Domains' section. The previous incomplete introductory paragraph is removed, and the case study table itself has been moved to Appendix Table 9, with a clear reference and descriptive sentence in the main text. This restructuring resolves the incompleteness by providing full context for the table's content in its new location.",
+        "flaw_addressed_quality": 4,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 5,
+        "start_of_flaw_addressed_text": "The model’s encipher capability is",
+        "end_of_flaw_addressed_text": "bypass the safety alignment.",
+        "flaw_addressed_description": "The paper now includes a new paragraph discussing whether the word 'Cipher' or other terms evoke the SelfCipher capability. It presents new experiments in Appendix Table 11, which shows the impact of replacing 'Cipher Code' with terms like 'tangshtr' or 'fake language', thus providing a more detailed analysis and insight into the SelfCipher mechanism.",
+        "flaw_addressed_quality": 5,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 6,
+        "start_of_flaw_addressed_text": "Some researchers may wonder if",
+        "end_of_flaw_addressed_text": "different types of instructions.",
+        "flaw_addressed_description": "A new subsection titled 'Generalization of CipherChat to General Instructions' has been added. This section introduces new experiments on the Alpaca benchmark, evaluating the validity and success rates of CipherChat for general instructions, and includes a new table (Table 12) presenting these results, thereby addressing the lack of evaluation in non-safety-related contexts.",
+        "flaw_addressed_quality": 5,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 8,
+        "start_of_flaw_addressed_text": "We recruited 2 annotators on",
+        "end_of_flaw_addressed_text": "for U.S. annotators.",
+        "flaw_addressed_description": "A new appendix section, 'More Details about Human Evaluation', has been added. It now explicitly details the number (2) and background (native Chinese, fluent English MA degree) of the annotators, their inter-annotator agreement (0.98 Fleiss' Kappa for validity, 0.95 for safety), and their compensation rate ($27.5/hour), providing all the previously missing methodological information for human evaluations.",
+        "flaw_addressed_quality": 5,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 9,
+        "start_of_flaw_addressed_text": "Table <a href=\"#tab:input_diff\" data-reference-type=\"ref\" data-reference=\"tab:input_diff\">5</a> lists example",
+        "end_of_flaw_addressed_text": "trigger the role-playing.",
+        "flaw_addressed_description": "A new appendix section, 'More Details About SelfCipher', has been added. It includes a new Table 5 illustrating the input differences between Caesar and SelfCipher, and provides a detailed explanation of SelfCipher's mechanism, clarifying that its prompts, demonstrations, and queries are in natural language and that no explicit enciphering/deciphering steps are involved.",
+        "flaw_addressed_quality": 5,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 10,
+        "start_of_flaw_addressed_text": "Since the original safety issue",
+        "end_of_flaw_addressed_text": "for each safety issue.",
+        "flaw_addressed_description": "A new appendix section, 'Removing Potential Cultural and Linguistic Implications', has been added. It explicitly acknowledges that the original Chinese dataset contained culturally specific instances, explains how these were identified, and details the manual curation process undertaken to remove such sentences to make the benchmark more language-agnostic.",
+        "flaw_addressed_quality": 4,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 12,
+        "start_of_flaw_addressed_text": "This study includes information that",
+        "end_of_flaw_addressed_text": "deployment of LLMs.",
+        "flaw_addressed_description": "A new section titled 'Ethics and Broader Impact' has been added. It explicitly discusses the potential for misuse of the research findings to generate harmful content, justifies the disclosure of these vulnerabilities, and emphasizes the importance of understanding LLM safety for their responsible deployment.",
+        "flaw_addressed_quality": 5,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 13,
+        "start_of_flaw_addressed_text": "Impact of in-context learning",
+        "end_of_flaw_addressed_text": "mitigate unsafe behaviors.",
+        "flaw_addressed_description": "The acronym 'ICL' (In-Context Learning) is now explicitly defined and expanded in the title of Table 3 (formerly Table 7) and in the accompanying paragraph, resolving the previous lack of definition.",
+        "flaw_addressed_quality": 5,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 14,
+        "start_of_flaw_addressed_text": "Note that <code>SelfCipher</code> does",
+        "end_of_flaw_addressed_text": "in natural language.",
+        "flaw_addressed_description": "The paper now includes an explicit statement clarifying that SelfCipher operates entirely in natural language, meaning its inputs (prompt, demonstrations, query) and outputs are not conventional ciphers. This implies that no separate deciphering step is needed for evaluation, thereby clarifying both the input format and the measurement of its unsafe rate. Further details are provided in the new Appendix 6.1 with an example.",
+        "flaw_addressed_quality": 5,
+        "flaw_addressed_confidence": 5
+    }
+]
