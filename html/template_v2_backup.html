@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Camera-Ready Verification</title>
+
+<style>
+
+body{
+    font-family: Arial, sans-serif;
+    margin:0;
+}
+
+.topbar{
+    position:sticky;
+    top:0;
+    background:white;
+    border-bottom:1px solid #ddd;
+    padding:14px;
+    z-index:1000;
+}
+
+.instructions-box{
+    position:relative;
+    background:#fff8e6;
+    border:1px solid #f0d98c;
+    border-left:6px solid #e0b400;
+    border-radius:6px;
+    padding:14px 16px;
+    margin-bottom:16px;
+    font-size:14px;
+}
+
+.instructions-close{
+    position:absolute;
+    top:6px;
+    right:10px;
+    font-size:18px;
+    cursor:pointer;
+    color:#555;
+}
+
+.instructions-close:hover{
+    color:black;
+}
+
+.instructions-title{
+    font-size:18px;
+    font-weight:bold;
+    margin-bottom:10px;
+    color:#333;
+}
+
+.instructions-list{
+    margin:0;
+    padding-left:18px;
+}
+
+.instructions-list li{
+    margin-bottom:4px;
+}
+
+.index-panel{
+    background:#f8f9fb;
+    border:1px solid #ddd;
+    border-radius:8px;
+    padding:12px;
+    margin-top:10px;
+}
+
+.index-title{
+    font-weight:bold;
+    margin-bottom:8px;
+}
+
+.index-grid{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+}
+
+.flaw-index{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:34px;
+    height:34px;
+    border-radius:6px;
+    cursor:pointer;
+    background:#e5e7eb;
+    font-weight:bold;
+    border:1px solid #cfcfcf;
+}
+
+.flaw-index:hover{
+    background:#d7dae0;
+}
+
+.flaw-index.active{
+    background:#f2e66c;
+    border-color:#b8aa35;
+}
+
+.flaw-index.unaddressed{
+    background:#f3b3b3;
+    border-color:#d26a6a;
+}
+
+.flaw-index.unaddressed.active{
+    background:#ff5c5c;
+    border-color:#c53b3b;
+}
+
+.container{
+    display:flex;
+    height:calc(100vh - 100px);
+}
+
+.paper-column{
+    width:50%;
+    display:flex;
+    flex-direction:column;
+    border-right:1px solid #ddd;
+}
+
+.paper-column:last-child{
+    border-right:none;
+}
+
+.paper-title{
+    padding:10px;
+    font-weight:bold;
+    border-bottom:1px solid #ddd;
+    background:#fafafa;
+}
+
+.paper{
+    overflow:auto;
+    padding:30px;
+    height:100%;
+}
+
+.paper.locked{
+    overflow:hidden;
+}
+
+.flaw{
+    background:#d9d9d9;
+    cursor:pointer;
+    position: relative;
+}
+
+.flaw.active{
+    background:#f2e66c;
+}
+
+.flaw.unaddressed{
+    background:#f3b3b3;
+}
+
+.flaw.unaddressed.active{
+    background:#ff5c5c;
+}
+
+.flaw-index.unaddressed{
+    background:#f3b3b3;
+}
+
+.flaw-index.unaddressed.active{
+    background:#ff5c5c;
+}
+
+.dialog{
+    position:absolute;
+    background:white;
+    border:1px solid #ccc;
+    padding:16px;
+    width:360px;
+    box-shadow:0 2px 12px rgba(0,0,0,0.25);
+    z-index:2000;
+}
+
+.dialog h4{
+    margin-top:0;
+    margin-bottom:10px;
+}
+
+.dialog-close{
+    position:absolute;
+    top:6px;
+    right:10px;
+    font-size:18px;
+    cursor:pointer;
+    color:#555;
+}
+
+.dialog-close:hover{
+    color:black;
+}
+
+.dialog hr{
+    margin-top:18px;
+    margin-bottom:18px;
+    border:none;
+    border-top:1px solid #ddd;
+}
+
+.scale-options {
+    margin-top: 6px;
+}
+
+.scale-options input {
+    display: none;
+}
+
+.scale-options label {
+    display: inline-block;
+    padding: 6px 12px;
+    margin-right: 6px;
+    border: 1px solid #cfcfcf;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    background: #f7f7f7;
+    transition: all 0.15s ease;
+}
+
+.scale-options label:hover {
+    background: #e9edf5;
+    border-color: #9aa8d6;
+}
+
+.scale-options input:checked + label {
+    background: #4f6df5;
+    border-color: #3f56c6;
+    color: white;
+    font-weight: bold;
+}
+
+.scale-note {
+    font-size: 12px;
+    color: #555;
+    display: block;
+    margin-top: 4px;
+}
+
+.survey-save-btn {
+    margin-top: 16px;
+    padding: 8px 16px;
+    font-size: 14px;
+    border-radius: 5px;
+    border: none;
+    background: #4f6df5;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.survey-save-btn:hover {
+    background: #3f56c6;
+}
+
+.survey-save-btn:active {
+    background: #3447a5;
+}
+
+
+
+
+/* Toast container */
+#toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 3000;
+}
+
+/* Individual toast */
+.toast {
+    background: #f0fdf4;          /* very light green background */
+    color: #06431d;               /* dark green text */
+    padding: 12px 16px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    border-left: 4px solid #22c55e;  /* accent bar */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    font-size: 14px;
+    line-height: 1.4;
+    opacity: 0.95;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+/* Fade-out animation */
+.toast.hide {
+    opacity: 0;
+    transform: translateY(-8px);
+}
+
+/* Survey panel */
+.survey-panel{
+    margin-top:14px;
+    background:#f8f9fb;
+    border:1px solid #ddd;
+    border-radius:8px;
+    padding:12px;
+}
+
+.survey-title{
+    font-weight:bold;
+}
+
+.survey-row{
+    margin-bottom:12px;
+}
+
+.survey-grid{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-top:6px;
+}
+
+.survey-item{
+    width:30px;
+    height:30px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:6px;
+    border:1px solid #ccc;
+    font-weight:bold;
+    font-size:13px;
+}
+
+.survey-item.pending{
+    background:#eee;
+}
+
+.survey-item.done{
+    background:#d1fae5;
+    border-color:#22c55e;
+}
+
+.survey-warning {
+    margin-top: 5px;
+    padding: 10px 12px;
+    background:#ffede6;
+    border:1px solid #f0a08c;
+    border-left:6px solid #e03400;
+    border-radius: 6px;
+    font-size: 14px;
+    line-height: 1.4;
+    color: #374151;
+    margin-bottom: 10px;
+}
+
+#download-surveys-panel-btn {
+    margin-top: 10px;
+    background: #16a34a;
+    color: white;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+#download-surveys-panel-btn:hover {
+    background: #15803d;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+#survey-progress-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #2563eb;
+    color: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+#survey-progress-btn:hover {
+    background: #1d4ed8;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="topbar">
+
+<div class="instructions-box" id="instructions-box">
+<div class="instructions-close" onclick="closeInstructions()">✕</div>
+
+<div class="instructions-title">
+How to use this <b>Camere-Ready Verification Tool</b>
+</div>
+
+<ul class="instructions-list">
+<li><b>Navigation</b> Click on flaw number in the "Flaw Navigation" to jump to the corresponding location in both papers.</li>
+<li><b>Default Highlight</b> All flaws in submitted paper and addressed flaws in camera-ready paper are highlighted in neutral gray color.</li>
+<li><b>Yellow Highlight</b> Once you click a flaw in the "Flaw Navigation", it is highlighted in yellow color.</li>
+<li><b>Red flaw numbers</b> indicate issues not addressed in the camera ready paper.</li>
+<li><b>Highlighted Text Click</b> When you click the highlighted text in either of the papers, you are shown details about the flaw or addressed flaw, which you can review.</li>
+<li><b>Survey</b> In the detailed view of flaw or addressed flaw, you are given a short survey to click-fill. You can do this for all the flaws and addressed flaws and download the complete survey from the "Survey Progress" panel.</li>
+
+</ul>
+
+</div>
+
+<!-- Flaw navigation -->
+<div class="index-panel">
+
+<div class="index-title">
+Flaw Navigation
+</div>
+
+<div class="index-grid">
+{% for flaw in flaws %}
+<div class="flaw-index {% if not flaw.is_addressed %}unaddressed{% endif %}"
+     data-flaw-id="{{ flaw.flaw_id }}"
+     title="Flaw {{ flaw.flaw_id }}">
+{{ flaw.flaw_id }}
+</div>
+{% endfor %}
+</div>
+
+</div>
+
+</div>
+
+
+<div class="container">
+
+<div class="paper-column">
+
+<div class="paper-title">
+Submitted Paper
+</div>
+
+<div class="paper" id="submitted-paper">
+{{ submitted_paper_html | safe }}
+</div>
+
+</div>
+
+
+<div class="paper-column">
+
+<div class="paper-title">
+Camera Ready Paper
+</div>
+
+<div class="paper" id="camera-paper">
+{{ camera_ready_paper_html | safe }}
+</div>
+
+</div>
+
+</div>
+
+<!-- Survey progress -->
+<div class="survey-panel" id="survey-progress-panel">
+
+<div class="survey-title">
+Survey Progress
+</div>
+<div id="survey-warning" class="survey-warning"></div>
+
+<div class="survey-row">
+Flaw Surveys
+<div id="flaw-survey-status" class="survey-grid"></div>
+</div>
+
+<div class="survey-row">
+Addressed Flaw Surveys
+<div id="addressed-survey-status" class="survey-grid"></div>
+</div>
+
+<button id="download-surveys-panel-btn" onclick="downloadAllSurveys()">
+Download Survey Results
+</button>
+</div>
+
+<!-- Floating button -->
+<button id="survey-progress-btn" onclick="scrollToSurveyPanel()">
+Survey Progress
+</button>
+
+<script>
+
+function closeInstructions(){
+    const box = document.getElementById("instructions-box")
+    if(box){
+        box.style.display = "none"
+    }
+}
+
+// Initialize the survey storage
+let surveyData = {
+    flaws_survey: {},          // key: flawId, value: survey answers
+    flaws_addressed_survey: {} // key: flawId, value: survey answers
+};
+const openreviewPaperId = {{ openreview_paper_id | tojson }};
+const flawData = {{ flaws | tojson }};
+const reviewData = {{ reviews | tojson }};
+const addressedData = {{ flaws_addressed | tojson }};
+
+let dialogs = {
+    submitted: null,
+    camera: null
+};
+
+
+function initializeSurveyStatus() {
+
+    const flawContainer = document.getElementById("flaw-survey-status");
+    const addressedContainer = document.getElementById("addressed-survey-status");
+
+    flawData.forEach(f => {
+
+        const el1 = document.createElement("div");
+        el1.className = "survey-item pending";
+        el1.id = `flaw-survey-${f.flaw_id}`;
+        el1.innerText = f.flaw_id;
+        flawContainer.appendChild(el1);
+
+        const el2 = document.createElement("div");
+        el2.className = "survey-item pending";
+        el2.id = `addr-survey-${f.flaw_id}`;
+        el2.innerText = f.flaw_id;
+        addressedContainer.appendChild(el2);
+
+    });
+
+}
+
+function updateSurveyWarning(){
+
+    const total = flawData.length;
+
+    const answeredFlaws = Object.keys(surveyData.flaws_survey).length;
+    const answeredAddressed = Object.keys(surveyData.flaws_addressed_survey).length;
+
+    const warning = document.getElementById("survey-warning");
+
+    if(answeredFlaws < total || answeredAddressed < total){
+
+        warning.innerText =
+        "Some surveys are still incomplete. Use the flaw navigation above to locate the flaw, open the highlighted text, review it, and submit the survey. Once you submit a survey for an item, it will be highlighted in green in the survey progress.";
+
+    } else {
+        warning.innerText = "";
+    }
+}
+
+function initializeFlawNumbers() {
+    const paperContainers = [
+        document.getElementById("submitted-paper"),
+        document.getElementById("camera-paper")
+    ];
+    paperContainers.forEach(container => {
+        if (!container) return;
+        container.style.position = "relative"; // ensure absolute children are positioned correctly
+
+        const flaws = container.querySelectorAll("[data-flaw-id]");
+
+        flaws.forEach(span => {
+            const flawId = span.getAttribute("data-flaw-id");
+
+            // Get vertical position relative to container
+            const rect = span.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            const top = rect.top - containerRect.top + container.scrollTop;
+
+            const numberEl = document.createElement("div");
+            numberEl.textContent = flawId;
+
+            numberEl.style.position = "absolute";
+            numberEl.style.left = "0";
+            numberEl.style.top = `${top}px`;
+
+            numberEl.style.width = "1.5em";
+            numberEl.style.textAlign = "right";
+
+            numberEl.style.fontSize = "14px";
+            numberEl.style.fontWeight = "600";
+            numberEl.style.fontFamily = "monospace";
+
+            numberEl.style.color = "#6b7280";     // neutral gray
+            numberEl.style.opacity = "1.0";
+
+            numberEl.style.pointerEvents = "none";
+            container.appendChild(numberEl);
+        });
+    });
+}
+
+
+initializeSurveyStatus();
+updateSurveyWarning();
+initializeFlawNumbers();
+
+
+function closeDialog(side){
+
+    if(dialogs[side]){
+        dialogs[side].remove()
+        dialogs[side] = null
+    }
+
+    const container = document.getElementById(side + "-paper")
+    container.classList.remove("locked")
+}
+
+function closeAllDialogs(){
+    closeDialog("submitted")
+    closeDialog("camera")
+}
+
+function clearActive(){
+
+    document.querySelectorAll('.flaw')
+    .forEach(el=>el.classList.remove('active'))
+
+    document.querySelectorAll('.flaw-index')
+    .forEach(el=>el.classList.remove('active'))
+}
+
+function activateFlaw(id){
+
+    closeAllDialogs()
+
+    clearActive()
+
+    document.querySelectorAll(`.flaw[data-flaw-id="${id}"]`)
+    .forEach(el=>el.classList.add('active'))
+
+    document.querySelector(`.flaw-index[data-flaw-id="${id}"]`)
+    .classList.add('active')
+
+    scrollToFlaw(id)
+}
+
+function scrollContainer(container, element){
+
+    const containerRect = container.getBoundingClientRect()
+    const elementRect = element.getBoundingClientRect()
+
+    const offset = elementRect.top - containerRect.top
+
+    const target = container.scrollTop + offset - 40
+
+    container.scrollTo({
+        top: target,
+        behavior: "smooth"
+    })
+}
+
+function scrollToFlaw(id){
+
+    const submitted = document.querySelector(`#submitted-paper .flaw[data-flaw-id="${id}"]`)
+    const camera = document.querySelector(`#camera-paper .flaw[data-flaw-id="${id}"]`)
+
+    if(submitted){
+        scrollContainer(
+            document.getElementById("submitted-paper"),
+            submitted
+        )
+    }
+
+    if(camera){
+        scrollContainer(
+            document.getElementById("camera-paper"),
+            camera
+        )
+    }
+}
+
+
+document.querySelectorAll('.flaw-index')
+.forEach(el=>{
+    el.addEventListener('click',()=>{
+        activateFlaw(el.dataset.flawId)
+    })
+})
+
+
+function createDialog(side, content, x, y){
+
+    closeDialog(side)
+
+    const container = document.getElementById(side + "-paper")
+
+    const d = document.createElement("div")
+    d.className = "dialog"
+
+    d.innerHTML =
+        `<div class="dialog-close" onclick="closeDialog('${side}')">✕</div>` +
+        content
+
+    d.style.left = x + "px"
+    d.style.top = y + "px"
+
+    document.body.appendChild(d)
+
+    dialogs[side] = d
+
+    container.classList.add("locked")
+}
+
+
+document.querySelectorAll('.flaw')
+.forEach(el=>{
+
+    el.addEventListener('click',e=>{
+
+        const id = parseInt(el.dataset.flawId)
+        const side = el.dataset.side
+
+        const rect = el.getBoundingClientRect()
+
+        if(side === "submitted"){
+
+            const flaw = flawData.find(f=>f.flaw_id === id)
+
+            let reviewURL = `https://openreview.net/forum?id=${openreviewPaperId}`;
+
+            // Prepare highlight text from review
+            const reviewObj = reviewData.find(r => r.id === flaw.review_id);
+            if (reviewObj && reviewObj.content?.summary?.value) {
+                let highlightText = "";
+                const summary = reviewObj.content.summary.value;
+                // get first sentence
+                const match = summary.match(/[^.!?]+[.!?]/);
+                highlightText = match ? match[0].trim() : summary.trim();
+                const encodedHighlight = encodeURIComponent(highlightText);
+                reviewURL = `https://openreview.net/forum?id=${openreviewPaperId}#:~:text=${encodedHighlight}`;
+            }
+            
+
+            const html = `
+            <h4>Flaw ${id}</h4>
+            <b>${flaw.flaw_title}</b><br><br>
+            ${flaw.flaw_description}<br><br>
+            <b>Category:</b> ${flaw.flaw_category}<br>
+            ${flaw.flaw_category_description}<br>
+            <b>Severity:</b> ${flaw.flaw_severity}<br>
+            <b>Confidence:</b> ${flaw.flaw_confidence}<br>
+            <b>Review ID:</b> 
+            <a href="${reviewURL}" target="_blank">${flaw.review_id}</a>
+
+            ${submittedSurveyHTML(id)}
+            `
+
+            createDialog(
+                "submitted",
+                html,
+                rect.left + window.scrollX,
+                rect.bottom + window.scrollY
+            )
+        }
+
+        if(side === "camera"){
+
+            const flaw = addressedData.find(f=>f.flaw_id === id)
+
+            const html = `
+            <h4>Addressed Flaw ${id}</h4>
+            ${flaw.flaw_addressed_description}<br><br>
+            <b>Quality:</b> ${flaw.flaw_addressed_quality}<br>
+            <b>Confidence:</b> ${flaw.flaw_addressed_confidence}
+
+            ${addressedSurveyHTML(id)}
+            `
+
+            createDialog(
+                "camera",
+                html,
+                rect.left + window.scrollX,
+                rect.bottom + window.scrollY
+            )
+        }
+
+    })
+
+})
+
+function submittedSurveyHTML(flawId) {
+    return `
+    <hr>
+    <h4>Flaw ${flawId} Survey</h4>
+
+    <!-- Q1: Title & Description -->
+    <p>How clearly does the title and description of the flaw explain the issue?</p>
+    <div class="scale-options">
+        <input type="radio" name="flaw${flawId}-clarity" id="flaw${flawId}-c-1" value="1">
+        <label for="flaw${flawId}-c-1">1</label>
+        <input type="radio" name="flaw${flawId}-clarity" id="flaw${flawId}-c-2" value="2">
+        <label for="flaw${flawId}-c-2">2</label>
+        <input type="radio" name="flaw${flawId}-clarity" id="flaw${flawId}-c-3" value="3">
+        <label for="flaw${flawId}-c-3">3</label>
+        <input type="radio" name="flaw${flawId}-clarity" id="flaw${flawId}-c-4" value="4">
+        <label for="flaw${flawId}-c-4">4</label>
+        <input type="radio" name="flaw${flawId}-clarity" id="flaw${flawId}-c-5" value="5">
+        <label for="flaw${flawId}-c-5">5</label>
+    </div>
+    <small class="scale-note">(1 = Not clear at all, 5 = Very clear)</small>
+    <hr>
+
+    <!-- Q2: Category -->
+    <p>How appropriate is the assigned category of the flaw?</p>
+    <div class="scale-options">
+        <input type="radio" name="flaw${flawId}-category" id="flaw${flawId}-cat-1" value="1">
+        <label for="flaw${flawId}-cat-1">1</label>
+        <input type="radio" name="flaw${flawId}-category" id="flaw${flawId}-cat-2" value="2">
+        <label for="flaw${flawId}-cat-2">2</label>
+        <input type="radio" name="flaw${flawId}-category" id="flaw${flawId}-cat-3" value="3">
+        <label for="flaw${flawId}-cat-3">3</label>
+        <input type="radio" name="flaw${flawId}-category" id="flaw${flawId}-cat-4" value="4">
+        <label for="flaw${flawId}-cat-4">4</label>
+        <input type="radio" name="flaw${flawId}-category" id="flaw${flawId}-cat-5" value="5">
+        <label for="flaw${flawId}-cat-5">5</label>
+    </div>
+    <small class="scale-note">(1 = Not appropriate, 5 = Perfectly appropriate)</small>
+    <hr>
+
+    <!-- Q3: Severity -->
+    <p>How accurate is the assigned severity of the flaw?</p>
+    <div class="scale-options">
+        <input type="radio" name="flaw${flawId}-severity" id="flaw${flawId}-sev-1" value="1">
+        <label for="flaw${flawId}-sev-1">1</label>
+        <input type="radio" name="flaw${flawId}-severity" id="flaw${flawId}-sev-2" value="2">
+        <label for="flaw${flawId}-sev-2">2</label>
+        <input type="radio" name="flaw${flawId}-severity" id="flaw${flawId}-sev-3" value="3">
+        <label for="flaw${flawId}-sev-3">3</label>
+        <input type="radio" name="flaw${flawId}-severity" id="flaw${flawId}-sev-4" value="4">
+        <label for="flaw${flawId}-sev-4">4</label>
+        <input type="radio" name="flaw${flawId}-severity" id="flaw${flawId}-sev-5" value="5">
+        <label for="flaw${flawId}-sev-5">5</label>
+    </div>
+    <small class="scale-note">(1 = Totally inaccurate, 5 = Very accurate)</small>
+    <hr>
+
+    <!-- Q4: LLM Confidence -->
+    <p>How reasonable is the LLM’s confidence rating for this flaw?</p>
+    <div class="scale-options">
+        <input type="radio" name="flaw${flawId}-confidence" id="flaw${flawId}-conf-1" value="1">
+        <label for="flaw${flawId}-conf-1">1</label>
+        <input type="radio" name="flaw${flawId}-confidence" id="flaw${flawId}-conf-2" value="2">
+        <label for="flaw${flawId}-conf-2">2</label>
+        <input type="radio" name="flaw${flawId}-confidence" id="flaw${flawId}-conf-3" value="3">
+        <label for="flaw${flawId}-conf-3">3</label>
+        <input type="radio" name="flaw${flawId}-confidence" id="flaw${flawId}-conf-4" value="4">
+        <label for="flaw${flawId}-conf-4">4</label>
+        <input type="radio" name="flaw${flawId}-confidence" id="flaw${flawId}-conf-5" value="5">
+        <label for="flaw${flawId}-conf-5">5</label>
+    </div>
+    <small class="scale-note">(1 = Not reasonable, 5 = Very reasonable)</small>
+
+    <button class="survey-save-btn" onclick="saveSurvey(${flawId}, 'submitted')">Save</button>
+    `;
+}
+
+function addressedSurveyHTML(flawId) {
+    return `
+    <hr>
+    <h4>Addressed Flaw ${flawId} Survey</h4>
+
+    <!-- Q1: Description -->
+    <p>How clearly does the description of the addressed flaw explain the resolution?</p>
+    <div class="scale-options">
+        <input type="radio" name="addr${flawId}-desc" id="addr${flawId}-d-1" value="1">
+        <label for="addr${flawId}-d-1">1</label>
+        <input type="radio" name="addr${flawId}-desc" id="addr${flawId}-d-2" value="2">
+        <label for="addr${flawId}-d-2">2</label>
+        <input type="radio" name="addr${flawId}-desc" id="addr${flawId}-d-3" value="3">
+        <label for="addr${flawId}-d-3">3</label>
+        <input type="radio" name="addr${flawId}-desc" id="addr${flawId}-d-4" value="4">
+        <label for="addr${flawId}-d-4">4</label>
+        <input type="radio" name="addr${flawId}-desc" id="addr${flawId}-d-5" value="5">
+        <label for="addr${flawId}-d-5">5</label>
+    </div>
+    <small class="scale-note">(1 = Not clear at all, 5 = Very clear)</small>
+    <hr>
+
+    <!-- Q2: Quality -->
+    <p>How accurate is the quality score assigned to the addressed flaw?</p>
+    <div class="scale-options">
+        <input type="radio" name="addr${flawId}-quality" id="addr${flawId}-q-1" value="1">
+        <label for="addr${flawId}-q-1">1</label>
+        <input type="radio" name="addr${flawId}-quality" id="addr${flawId}-q-2" value="2">
+        <label for="addr${flawId}-q-2">2</label>
+        <input type="radio" name="addr${flawId}-quality" id="addr${flawId}-q-3" value="3">
+        <label for="addr${flawId}-q-3">3</label>
+        <input type="radio" name="addr${flawId}-quality" id="addr${flawId}-q-4" value="4">
+        <label for="addr${flawId}-q-4">4</label>
+        <input type="radio" name="addr${flawId}-quality" id="addr${flawId}-q-5" value="5">
+        <label for="addr${flawId}-q-5">5</label>
+    </div>
+    <small class="scale-note">(1 = Poor, 5 = Excellent)</small>
+    <hr>
+
+    <!-- Q3: LLM Confidence -->
+    <p>How reasonable is the LLM’s confidence rating for this addressed flaw?</p>
+    <div class="scale-options">
+        <input type="radio" name="addr${flawId}-confidence" id="addr${flawId}-conf-1" value="1">
+        <label for="addr${flawId}-conf-1">1</label>
+        <input type="radio" name="addr${flawId}-confidence" id="addr${flawId}-conf-2" value="2">
+        <label for="addr${flawId}-conf-2">2</label>
+        <input type="radio" name="addr${flawId}-confidence" id="addr${flawId}-conf-3" value="3">
+        <label for="addr${flawId}-conf-3">3</label>
+        <input type="radio" name="addr${flawId}-confidence" id="addr${flawId}-conf-4" value="4">
+        <label for="addr${flawId}-conf-4">4</label>
+        <input type="radio" name="addr${flawId}-confidence" id="addr${flawId}-conf-5" value="5">
+        <label for="addr${flawId}-conf-5">5</label>
+    </div>
+    <small class="scale-note">(1 = Not reasonable, 5 = Very reasonable)</small>
+
+    <button class="survey-save-btn" onclick="saveSurvey(${flawId}, 'camera')">Save</button>
+    `;
+}
+
+// Show a temporary toast notification
+function showToast(message) {
+    const container = document.getElementById("toast-container");
+    const toast = document.createElement("div");
+    toast.className = "toast";
+    toast.innerText = message;
+    container.appendChild(toast);
+
+    // Fade out and remove after 2s
+    setTimeout(() => {
+        toast.classList.add("hide");
+        setTimeout(() => toast.remove(), 500);
+    }, 2000);
+}
+
+function saveSurvey(flawId, side) {
+    const dialog = dialogs[side];
+    if (!dialog) return;
+
+    // Remove previous error message if any
+    const prevError = dialog.querySelector(".survey-error");
+    if(prevError) prevError.remove();
+
+    // Collect all questions (radio groups)
+    const groups = Array.from(dialog.querySelectorAll("div.scale-options"));
+    let allAnswered = true;
+    let answers = {};
+
+    groups.forEach((group, index) => {
+        const radios = group.querySelectorAll("input[type='radio']");
+        const selected = Array.from(radios).find(r => r.checked);
+        if (!selected) {
+            allAnswered = false;
+        } else {
+            // Map to question_1, question_2, ...
+            answers[`question_${index + 1}`] = selected.value;
+        }
+    });
+
+
+    if (!allAnswered) {
+        const error = document.createElement("div");
+        error.className = "survey-error";
+        error.style.color = "red";
+        error.style.marginTop = "8px";
+        error.innerText = "Please answer all questions before saving.";
+        const saveBtn = dialog.querySelector(".survey-save-btn");
+        if (saveBtn) saveBtn.parentNode.insertBefore(error, saveBtn);
+        return; // stop saving
+    }
+
+    // Save answers to surveyData
+    const entry = { flaw_id: flawId, ...answers };
+    if (side === 'submitted') {
+        surveyData.flaws_survey[flawId] = entry;
+    } else if (side === 'camera') {
+        surveyData.flaws_addressed_survey[flawId] = entry;
+    }
+
+    // Close the dialog
+    closeDialog(side);
+
+    // Show feedback
+    if (side === 'submitted') {
+        showToast(`Survey for Flaw ${flawId} saved!`);
+    } else if (side === 'camera') {
+        showToast(`Survey for Flaw Addressed ${flawId} saved!`);
+    }
+
+    if (side === "submitted") {
+        const el = document.getElementById(`flaw-survey-${flawId}`);
+        if (el) {
+            el.classList.remove("pending");
+            el.classList.add("done");
+        }
+    }
+
+    if (side === "camera") {
+        const el = document.getElementById(`addr-survey-${flawId}`);
+        if (el) {
+            el.classList.remove("pending");
+            el.classList.add("done");
+        }
+    }
+
+    updateSurveyWarning();
+
+}
+
+function scrollToSurveyPanel() {
+    const panel = document.getElementById("survey-progress-panel");
+    if (!panel) return;
+
+    panel.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+    });
+}
+
+function downloadAllSurveys() {
+
+    const total = flawData.length;
+
+    const answeredFlaws = Object.keys(surveyData.flaws_survey).length;
+    const answeredAddressed = Object.keys(surveyData.flaws_addressed_survey).length;
+
+    if(answeredFlaws < total || answeredAddressed < total){
+
+        const proceed = confirm(
+            "Some surveys are incomplete. Are you sure you want to download the results?"
+        );
+
+        if(!proceed) return;
+    }
+
+    const dataStr =
+        "data:text/json;charset=utf-8," +
+        encodeURIComponent(JSON.stringify(surveyData, null, 2));
+
+    const dlAnchor = document.createElement('a');
+    dlAnchor.setAttribute("href", dataStr);
+    dlAnchor.setAttribute("download", "meta_review_surveys.json");
+    dlAnchor.click();
+}
+
+</script>
+
+<div id="toast-container"></div>
+
+</body>
+</html>
