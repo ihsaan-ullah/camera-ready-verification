@@ -9,7 +9,7 @@ CAMERA_READY_PAPER_HTML = "papers/camera_ready/paper.html"
 OPENREVIEW_PAPER_ID = "MbfAK4s61A"
 
 HTML_TEMPLATE_DIRECTORY = "html"
-HTML_TEMPLATE_FILE_NAME = "template.html"
+HTML_TEMPLATE_FILE_NAME = "template_v2.html"
 ANNOTATED_HTML_FILE = "annotated.html"
 
 

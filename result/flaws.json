@@ -81,7 +81,7 @@
         "start_of_flaw": "For the <em>Crimes</em> domain",
         "end_of_flaw": "across models and languages.",
         "flaw_category": "4b",
-        "flow_title": "Missing Human Evaluation Details",
+        "flaw_title": "Missing Human Evaluation Details",
         "flaw_description": "The paper lacked crucial methodological details regarding the human evaluation, such as the number and background of annotators, inter-annotator agreement, and compensation. The authors provided these details in their reply, specifying 2 native Chinese/fluent English annotators, Fleiss' Kappa of 0.95-0.98, and compensation of $27.5/hour.",
         "flaw_severity": "medium",
         "flaw_confidence": 5,
