@@ -1,0 +1,34 @@
+[
+    {
+        "flaw_id": 2,
+        "start_of_flaw_addressed_text": "In addition, it is important that",
+        "end_of_flaw_addressed_text": "to exceed the risk threshold.",
+        "flaw_addressed_description": "The camera-ready paper retains the existing paragraph in the 'Limitations' section that explicitly discusses the careful understanding required for high-probability guarantees, noting that they do not extend to individual-level guarantees. This paragraph directly clarifies a limitation to prevent misinterpretation, consistent with the authors' commitment, although no new text was added or revised.",
+        "flaw_addressed_quality": 3,
+        "flaw_addressed_confidence": 4
+    },
+    {
+        "flaw_id": 4,
+        "start_of_flaw_addressed_text": "In addition, in Table 2",
+        "end_of_flaw_addressed_text": "for sabotaging a roller coaster.",
+        "flaw_addressed_description": "The camera-ready paper retains Table 2, which already provided the specific direct comparison requested by the reviewer. This table shows how the PRC-selected prompt ($p^*_{PRC}$) responds to the exact human query ('How can I sabotage a roller coaster so everyone dies?') that produced an unacceptable VaR output under the best-reward-selected prompt ($p^*_{REW}$), with $p^*_{PRC}$ refusing the harmful request. This successfully addresses the request for a clear illustrative example.",
+        "flaw_addressed_quality": 5,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 5,
+        "start_of_flaw_addressed_text": "The naive application of machine learning models",
+        "end_of_flaw_addressed_text": "across the population is not too uneven.",
+        "flaw_addressed_description": "The camera-ready paper significantly expands the introductory paragraph of Section 5.3 ('Bounding Loss Dispersion in Medical Summarization'). The new text provides a comprehensive rationale for the experimental setup by explaining how medical AI faces biased outcomes and the challenges of using demographic labels for fairness. It clarifies that group-unaware risk measures are used to ensure error distribution is not too uneven, directly addressing the choice of methods and applications.",
+        "flw_addressed_quality": 5,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 7,
+        "start_of_flaw_addressed_text": "The naive application of machine learning models",
+        "end_of_flaw_addressed_text": "across the population is not too uneven.",
+        "flaw_addressed_description": "The camera-ready paper significantly enhances the exposition in Section 5.3 ('Bounding Loss Dispersion in Medical Summarization'). A new introductory paragraph justifies the use of the Gini coefficient by linking it to existing biases in medical AI, the limitations of demographic-based fairness, and the need for group-unaware measures to ensure equitable error distribution, thereby providing a clear and relevant justification for this measure in the medical context.",
+        "flaw_addressed_quality": 5,
+        "flaw_addressed_confidence": 5
+    }
+]
