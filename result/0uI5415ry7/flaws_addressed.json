@@ -1,0 +1,82 @@
+[
+    {
+        "flaw_id": 1,
+        "start_of_flaw_addressed_text": "We expect that such a simple",
+        "end_of_flaw_addressed_text": "the Transformer optimization landscape.",
+        "flaw_addressed_description": "While the core 'missing theoretical foundation' remains, the authors clarified the research scope and limitations. A new paragraph was added after 'Main contributions' explicitly stating that theoretical research and development of optimization methods are 'out-of-scope of this work, and left for future work.' The conclusion also explicitly acknowledges the lack of a solid theoretical foundation for their findings.",
+        "flaw_addressed_quality": 2,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 2,
+        "start_of_flaw_addressed_text": "In order to see the effect",
+        "end_of_flaw_addressed_text": "for <a href=\"#sec:mlp\" data-reference-type=\"ref+label\" data-reference=\"sec:mlp\">7</a> for details.",
+        "flaw_addressed_description": "The authors addressed the limited scope by adding new empirical evaluations. A new paragraph in Section 3.2 introduces 'additional set of experiments for a nonlinear regression' where covariates are distorted by an MLP with nonlinear activations. These experiments are detailed in a new Section 7, expanding the empirical scope beyond purely linear regression.",
+        "flaw_addressed_quality": 4,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 3,
+        "start_of_flaw_addressed_text": "The heavy-tail stochastic gradient noise",
+        "end_of_flaw_addressed_text": "in <a href=\"#fig:histogram_2\" data-reference-type=\"ref+label\" data-reference=\"fig:histogram_2\">[fig:histogram_2]</a>.",
+        "flaw_addressed_description": "To provide a more quantitative analysis, the authors updated Figure 2, Figure 3, Figure 6, and Figure 7 to include quantile-quantile (Q-Q) plots in the top-right corner of the histograms. The caption for Figure 3 was explicitly updated to explain that these Q-Q plots compare the histogram (y-axis) with its best-fit Gaussian (x-axis), providing a more rigorous assessment of heavy-tailedness.",
+        "flaw_addressed_quality": 5,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 4,
+        "start_of_flaw_addressed_text": "We also note that the",
+        "end_of_flaw_addressed_text": "and softmax Transformers.",
+        "flaw_addressed_description": "The paper now includes a discussion in Section 3.1 about the behavior of attention weights without softmax activation. It notes that the lack of softmax may lead to denser attention scores for linear transformers compared to softmax transformers, but also states that the sparsity of learned attention scores depends on the data distribution, providing an example with orthogonal covariates.",
+        "flaw_addressed_quality": 4,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 5,
+        "start_of_flaw_addressed_text": "We also note that the key-query",
+        "end_of_flaw_addressed_text": "largely similar to ours.",
+        "flaw_addressed_description": "The authors added an ablation study to address the simplified attention parameterization. In Section 3.1, they state that an experiment shown in the left plot of Figure 5 verifies that using separate Q, K (query, key) matrices (the standard parametrization) yields a loss plot largely similar to their simplified approach, demonstrating that the simplification does not qualitatively alter the optimization characteristics.",
+        "flaw_addressed_quality": 5,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 6,
+        "start_of_flaw_addressed_text": "We expect that such a simple",
+        "end_of_flaw_addressed_text": "the Transformer optimization landscape.",
+        "flaw_addressed_description": "The paper's scope is now more clearly defined. The Introduction refines the description of the linear attention model as an abstraction 'without nonlinear activations and feedforward networks'. Furthermore, a new paragraph was added after 'Main contributions' explicitly stating what aspects (e.g., theoretical research, optimization method development) are 'out-of-scope of this work, and left for future work,' providing a clearer delimitation.",
+        "flaw_addressed_quality": 4,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 7,
+        "start_of_flaw_addressed_text": "We emphasize here that the linear",
+        "end_of_flaw_addressed_text": "<em>Z^\top Q Z</em>.",
+        "flaw_addressed_description": "The authors explicitly clarified the omission of Feed Forward Networks (FFNs). In the Introduction, they describe the linear attention model as an abstraction 'without nonlinear activations and feedforward networks'. This is further reiterated in Section 3.1, where they state that 'our architecture does not have feedforward networks'.",
+        "flaw_addressed_quality": 5,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 8,
+        "start_of_flaw_addressed_text": "For each different setting,",
+        "end_of_flaw_addressed_text": "for <a href=\"#sec:hyper\" data-reference-type=\"ref+label\" data-reference=\"sec:hyper\">6</a> for details.",
+        "flaw_addressed_description": "The authors addressed this by adding a new appendix section, 'Hyperparameters for the experiments' (Section 6), which includes a detailed table ('table:hyper') summarizing the specific learning rates for SGD and Adam across all nine experimental settings. General parameters like momentum (0.9 for SGD, 0.9 for Adam) and gradient clipping thresholds (1) are also explicitly stated, greatly improving reproducibility.",
+        "flaw_addressed_quality": 5,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 9,
+        "start_of_flaw_addressed_text": "The data distribution can be",
+        "end_of_flaw_addressed_text": "linear regression examples:",
+        "flaw_addressed_description": "The authors made significant corrections in Section 3.1 regarding the data distribution and input matrix formulation. They clarified the notation for covariates (from `{i}` to `x^(i)`), corrected the representation of the input matrix `Z_0` in the equation to properly include `x^(i)` and `y^(i)` in line with its `(d+1) x (n+1)` dimensions, and clarified the prediction goal from 'missing `n+1`' to 'missing `y^(n+1)`'. These changes resolve inconsistencies and improve clarity.",
+        "flaw_addressed_quality": 5,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 10,
+        "start_of_flaw_addressed_text": "For a symmetric matrix M,",
+        "end_of_flaw_addressed_text": "the optimization literature.",
+        "flaw_addressed_description": "The authors addressed minor grammatical and presentation inconsistencies. Specifically, in Section 2.1 ('A whirlwind tour of (convex) optimization theory'), the word 'features' was corrected to 'concepts'. Furthermore, the capitalization of 'Transformers' was made consistent throughout the entire manuscript (e.g., 'Transformer optimization', 'full Transformers', 'linear Transformers'), improving overall polish and readability.",
+        "flaw_addressed_quality": 5,
+        "flaw_addressed_confidence": 5
+    }
+]

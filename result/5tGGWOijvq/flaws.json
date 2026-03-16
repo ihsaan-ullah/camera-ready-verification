@@ -1,0 +1,79 @@
+[
+    {
+        "flaw_id": 1,
+        "start_of_flaw": "The statistical techniques underlying these bounds are non-trivial,",
+        "end_of_flaw": "and the code distributed with this paper.",
+        "flaw_category": "4a",
+        "flaw_title": "Incomplete Reference in Footnote",
+        "flaw_description": "Footnote 4, which is referenced in the 'Quantile Risk Control' section, contains an incomplete reference: '(e.g., that distributed by )'. This omission should be completed to improve clarity and provide proper attribution or guidance to the mentioned open-source software.",
+        "flaw_severity": "low",
+        "flaw_confidence": 5,
+        "review_id": "roPJ9tJEtS"
+    },
+    {
+        "flaw_id": 2,
+        "start_of_flaw": "One key limitation of our framework is that the user-designated risk constraints",
+        "end_of_flaw": "and/or identifying those individuals who are likely to exceed the risk threshold.",
+        "flaw_category": "5a",
+        "flaw_title": "Unaddressed Potential for Misinterpretation of Bounds",
+        "flaw_description": "The paper lacks a discussion on how to prevent potential misinterpretations of the derived high-probability bounds and risk measures. Such misinterpretations could lead to incorrect conclusions or misuse of the framework, potentially amplifying unintended consequences in real-world deployments. The authors acknowledged this as a potential problem and committed to ensuring clarity regarding assumptions and limitations in the final version.",
+        "flaw_severity": "medium",
+        "flaw_confidence": 4,
+        "review_id": "roPJ9tJEtS"
+    },
+    {
+        "flaw_id": 3,
+        "start_of_flaw": "Because of the general nature of our framework and the interchangeability of many parts,",
+        "end_of_flaw": "or application of the PRC algorithm).",
+        "flaw_category": "4a",
+        "flaw_title": "Insufficient Discussion of Scalability with Large Prompt Sets",
+        "flaw_description": "The paper does not provide sufficient clarity or explicit strategies for efficiently evaluating Prompt Risk Control (PRC) when faced with a large set of candidate prompts. While computational costs for specific bounds are mentioned, the trade-off between the number of candidate prompts and the tightness of the bounds, as well as practical mitigation strategies like early stopping, are not adequately discussed. The authors acknowledged this trade-off and committed to making it clearer in their writing.",
+        "flaw_severity": "medium",
+        "flaw_confidence": 5,
+        "review_id": "gJ1qs6Immo"
+    },
+    {
+        "flaw_id": 4,
+        "start_of_flaw": "Figure 9 shows the results for this experiment. On the left,",
+        "end_of_flaw": "sabotaging a roller coaster.",
+        "flaw_category": "4a",
+        "flaw_title": "Limited Illustrative Examples in Chatbot Experiment Tables",
+        "flaw_description": "The illustrative examples in Table 1 and Table 2 of the chatbot experiment are limited. Specifically, a direct comparison showing how the PRC-selected prompt responds to the exact human query that produced the unacceptable VaR output under the best-reward-selected prompt would greatly enhance the clarity and impact of the results. The authors agreed to include this output and other illustrative sample query-response pairs in the final draft.",
+        "flaw_severity": "low",
+        "flaw_confidence": 5,
+        "review_id": "gJ1qs6Immo"
+    },
+    {
+        "flaw_id": 5,
+        "start_of_flaw": "We perform experiments to investigate the effects of using our framework",
+        "end_of_flaw": "on a typical personal computer with only CPUs.",
+        "flaw_category": "4a",
+        "flaw_title": "Unclear Rationale for Experimental Setup",
+        "flaw_description": "The paper lacks a clear and comprehensive explanation of the rationale behind applying specific Prompt Risk Control (PRC) methods (e.g., Learn Then Test, Quantile Risk Control) exclusively to particular experimental applications (e.g., code generation, chatbot toxicity). Greater exposition on how each experimental configuration was chosen would improve reader understanding of the framework's practical application. The authors committed to refining the writing in the experiments section to clarify these choices.",
+        "flaw_severity": "medium",
+        "flaw_confidence": 5,
+        "review_id": "PSUtuLDEVz"
+    },
+    {
+        "flaw_id": 6,
+        "start_of_flaw": "Once $\\hat P$ is returned, $\\mathop{\\mathrm{argmin}}_{p \\in \\hat P}\\hat R(G_p, l)$ could",
+        "end_of_flaw": "is not unknowingly modified).",
+        "flaw_category": "4a",
+        "flaw_title": "Abstract Description of 2-Stage Prompt Selection Pipeline",
+        "flaw_description": "The description of the 2-stage prompt selection pipeline in the 'Prompt Risk Control' section (page 3) is too abstract. It lacks concrete examples or specific insights into its application in prompt engineering, particularly for black-box LLMs, making it challenging for readers to fully grasp its practical implementation. The authors committed to offering a more concrete example in their writing.",
+        "flaw_severity": "medium",
+        "flaw_confidence": 5,
+        "review_id": "PSUtuLDEVz"
+    },
+    {
+        "flaw_id": 7,
+        "start_of_flaw": "In domains such as medicine where the application of LLMs has",
+        "end_of_flaw": "still producing accurate summaries.",
+        "flaw_category": "4a",
+        "flaw_title": "Unclear Justification for Gini Coefficient in Medical Summarization",
+        "flaw_description": "The paper does not provide sufficient exposition to clearly explain the connection and relevance of using the Gini coefficient, a measure of societal dispersion, in the context of the medical question summarization task. More details are needed to justify why this specific measure is appropriate and how it translates to practical concerns regarding outcome inequality in this domain. The authors agreed to add more exposition to explain this choice.",
+        "flaw_severity": "medium",
+        "flaw_confidence": 5,
+        "review_id": "PSUtuLDEVz"
+    }
+]

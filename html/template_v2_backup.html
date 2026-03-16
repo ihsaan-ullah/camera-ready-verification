@@ -1291,6 +1291,7 @@ function downloadAllSurveys() {
     dlAnchor.click();
 }
 
+// Warning on page reload or close
 window.addEventListener("beforeunload", function (e) {
     e.preventDefault();
     e.returnValue = true;

@@ -1,0 +1,68 @@
+[
+    {
+        "flaw_id": 1,
+        "start_of_flaw": "We find that our novel",
+        "end_of_flaw": "in perplexity for the models.",
+        "flaw_category": "1c",
+        "flaw_title": "Empirical Coefficient Selection",
+        "flaw_description": "The choice of coefficients (e.g., lambda values like 0.6 or 0.96) for the model arithmetic formulas, particularly in the toxicity reduction and fine-grained control tasks, is largely empirical. The authors determined these by gradually increasing biasing strength until a degradation in perplexity was observed, rather than employing a fully principled or theoretically-supported method. This approach makes it challenging for users to intuitively determine effective values for new tasks.",
+        "flaw_severity": "medium",
+        "flaw_confidence": 5,
+        "review_id": "qLlG2bPTFf"
+    },
+    {
+        "flaw_id": 2,
+        "start_of_flaw": "We find that our novel",
+        "end_of_flaw": "in perplexity for the models.",
+        "flaw_category": "1d",
+        "flaw_title": "Lack of Finer-Grained Qualitative Evaluation",
+        "flaw_description": "The initial evaluation lacked a finer-grained qualitative analysis, such as human or strong LLM-backed evaluations (e.g., GPT-4), relying primarily on automated classifier and perplexity scores. This raised concerns about whether the generated text might exhibit qualitatively strange or incoherent aspects that simple metrics would not fully capture. The authors addressed this by adding GPT-4 evaluation for toxicity reduction and sentiment control.",
+        "flaw_severity": "medium",
+        "flaw_confidence": 5,
+        "review_id": "294WvaLe2c"
+    },
+    {
+        "flaw_id": 3,
+        "start_of_flaw": "We evaluate model arithmetic by",
+        "end_of_flaw": "to efappendix:experimental_details.",
+        "flaw_category": "1b",
+        "flaw_title": "Limited Scope of Generative Scenarios",
+        "flaw_description": "The initial evaluation was restricted to toxicity reduction and fine-grained topic control, with reviewers recommending broadening the scope to other common Controlled Text Generation (CTG) tasks like sentiment control or personalized translation. The authors addressed this by adding an extra evaluation section on sentiment control.",
+        "flaw_severity": "medium",
+        "flaw_confidence": 5,
+        "review_id": "294WvaLe2c"
+    },
+    {
+        "flaw_id": 4,
+        "start_of_flaw": "Finally, we note that this fine-grained",
+        "end_of_flaw": "agnostic) classifier.",
+        "flaw_category": "5a",
+        "flaw_title": "Fluency Degradation with High Classifier Strength",
+        "flaw_description": "A technical limitation was identified where using classifiers at very high strengths for certain attributes (e.g., 'educational') could lead to a slight decrease in the fluency of the generated text, sometimes resulting in nonsensical word replacements. This limitation, though specific to high classifier weights, was acknowledged by the authors.",
+        "flaw_severity": "low",
+        "flaw_confidence": 5,
+        "review_id": "294WvaLe2c"
+    },
+    {
+        "flaw_id": 5,
+        "start_of_flaw": "First, we assess the effectiveness",
+        "end_of_flaw": "remains fluent and coherent.",
+        "flaw_category": "1d",
+        "flaw_title": "Biased Baseline Comparison Setup",
+        "flaw_description": "The initial comparison with baselines in the toxicity reduction task was perceived as biased because prior methods were evaluated in a single, ad-hoc configuration, while model arithmetic was tested across more configurations, potentially skewing fairness. The authors addressed this by conducting a more thorough investigation and extending the parameter evaluation for baselines.",
+        "flaw_severity": "medium",
+        "flaw_confidence": 5,
+        "review_id": "HI7Jse9UP1"
+    },
+    {
+        "flaw_id": 6,
+        "start_of_flaw": "We find that our novel",
+        "end_of_flaw": "in perplexity for the models.",
+        "flaw_category": "1b",
+        "flaw_title": "Lack of Evaluation on Smaller Models",
+        "flaw_description": "The initial evaluation did not include experiments with smaller language models (e.g., GPT-2 family), which would have provided a broader understanding of the method's applicability across different model scales. The authors addressed this by extending the toxicity results to include evaluations with the GPT-2 model family.",
+        "flaw_severity": "medium",
+        "flaw_confidence": 5,
+        "review_id": "jKZS833UEW"
+    }
+]

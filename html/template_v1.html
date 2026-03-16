@@ -469,39 +469,43 @@ Camera Ready Paper
 <!-- Survey progress -->
 <div class="survey-panel" id="survey-progress-panel">
 
-<div class="survey-title">
-Survey Progress
-</div>
-<div id="survey-warning" class="survey-warning"></div>
+    <div class="survey-title">
+    Survey Progress
+    </div>
+    <div id="survey-warning" class="survey-warning"></div>
 
-<div class="survey-row">
-Flaw Surveys
-<div id="flaw-survey-status" class="survey-grid"></div>
-</div>
+    <div class="survey-row">
+    Flaw Surveys
+    <div id="flaw-survey-status" class="survey-grid"></div>
+    </div>
 
-<div class="survey-row">
-Addressed Flaw Surveys
-<div id="addressed-survey-status" class="survey-grid"></div>
-</div>
+    <div class="survey-row">
+    Addressed Flaw Surveys
+    <div id="addressed-survey-status" class="survey-grid"></div>
+    </div>
 
-<button id="download-surveys-panel-btn" onclick="downloadAllSurveys()">
-Download Survey Results
-</button>
+    <button id="download-surveys-panel-btn" onclick="downloadAllSurveys()">
+    Download Survey Results
+    </button>
+
+    <hr>
+    <div class="survey-restore">
+        <div class="survey-title">
+            Continue from a previous survey
+        </div>
+        <p>If you previously downloaded your survey responses, you can upload the JSON file here to continue working.</p>
+        
+        <input type="file" id="survey-upload" accept=".json">
+    </div>
+
 </div>
 
 <!-- Floating button -->
 <button id="survey-progress-btn" onclick="scrollToSurveyPanel()">
-Survey Progress
+Survey Progress and Download
 </button>
 
 <script>
-
-function closeInstructions(){
-    const box = document.getElementById("instructions-box")
-    if(box){
-        box.style.display = "none"
-    }
-}
 
 // Initialize the survey storage
 let surveyData = {
@@ -518,12 +522,22 @@ let dialogs = {
     camera: null
 };
 
+function closeInstructions(){
+    const box = document.getElementById("instructions-box")
+    if(box){
+        box.style.display = "none"
+    }
+}
 
 function initializeSurveyStatus() {
 
     const flawContainer = document.getElementById("flaw-survey-status");
     const addressedContainer = document.getElementById("addressed-survey-status");
 
+    // Remove existing children
+    flawContainer.innerHTML = "";
+    addressedContainer.innerHTML = "";
+    
     flawData.forEach(f => {
 
         const el1 = document.createElement("div");
@@ -538,6 +552,28 @@ function initializeSurveyStatus() {
         el2.innerText = f.flaw_id;
         addressedContainer.appendChild(el2);
 
+    });
+
+}
+
+function updateSurveyStatus() {
+
+    // Update flaws survey status
+    Object.keys(surveyData.flaws_survey).forEach(flawId => {
+        const el = document.getElementById(`flaw-survey-${flawId}`);
+        if (el) {
+            el.classList.remove("pending");
+            el.classList.add("done");
+        }
+    });
+
+    // Update addressed survey status
+    Object.keys(surveyData.flaws_addressed_survey).forEach(flawId => {
+        const el = document.getElementById(`addr-survey-${flawId}`);
+        if (el) {
+            el.classList.remove("pending");
+            el.classList.add("done");
+        }
     });
 
 }
@@ -940,7 +976,7 @@ function showToast(message) {
     setTimeout(() => {
         toast.classList.add("hide");
         setTimeout(() => toast.remove(), 500);
-    }, 2000);
+    }, 5000);
 }
 
 function saveSurvey(flawId, side) {
@@ -997,22 +1033,7 @@ function saveSurvey(flawId, side) {
         showToast(`Survey for Flaw Addressed ${flawId} saved!`);
     }
 
-    if (side === "submitted") {
-        const el = document.getElementById(`flaw-survey-${flawId}`);
-        if (el) {
-            el.classList.remove("pending");
-            el.classList.add("done");
-        }
-    }
-
-    if (side === "camera") {
-        const el = document.getElementById(`addr-survey-${flawId}`);
-        if (el) {
-            el.classList.remove("pending");
-            el.classList.add("done");
-        }
-    }
-
+    updateSurveyStatus();
     updateSurveyWarning();
 
 }
@@ -1052,6 +1073,45 @@ function downloadAllSurveys() {
     dlAnchor.setAttribute("download", "meta_review_surveys.json");
     dlAnchor.click();
 }
+
+// Warning on page reload or close
+window.addEventListener("beforeunload", function (e) {
+    e.preventDefault();
+    e.returnValue = true;
+});
+
+// Upload json survey
+document.getElementById("survey-upload").addEventListener("change", function (event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function (e) {
+        try {
+            const data = JSON.parse(e.target.result);
+
+            if (!data.flaws_survey || !data.flaws_addressed_survey) {
+                alert("Invalid survey file.");
+                return;
+            }
+
+            surveyData = data;
+            showToast("Survey data loaded successfully.");
+            initializeSurveyStatus();
+            updateSurveyStatus();
+            updateSurveyWarning();
+
+        } catch (err) {
+            console.error("Error loading survey file:", err);
+            alert("Could not read the survey file.");
+        }
+        // Clear file input
+        event.target.value = "";
+    };
+
+    reader.readAsText(file);
+});
 
 </script>
 

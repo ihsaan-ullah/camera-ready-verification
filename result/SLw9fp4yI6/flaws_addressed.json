@@ -1,0 +1,34 @@
+[
+    {
+        "flaw_id": 2,
+        "start_of_flaw_addressed_text": "Furthermore, we include a preference",
+        "end_of_flaw_addressed_text": "best baseline, PreAdd.",
+        "flaw_addressed_description": "The authors addressed the lack of a finer-grained qualitative evaluation by adding a preference analysis using GPT-4. This analysis compares their proposed method against the best baseline (PreAdd) in toxicity reduction, providing an LLM-backed evaluation that goes beyond automated classifier and perplexity scores.",
+        "flaw_addressed_quality": 5,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 3,
+        "start_of_flaw_addressed_text": "We further evaluate model arithmetic",
+        "end_of_flaw_addressed_text": "efappendix:sentiment.",
+        "flaw_addressed_description": "The paper now includes an additional evaluation on the task of sentiment control, thereby broadening the scope of generative scenarios beyond just toxicity reduction and fine-grained topic control, as suggested by reviewers.",
+        "flaw_addressed_quality": 5,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 4,
+        "start_of_flaw_addressed_text": "Finally, we note that this fine-grained",
+        "end_of_flaw_addressed_text": "agnostic) classifier.",
+        "flaw_addressed_description": "The paper explicitly acknowledges the technical limitation that using classifiers at very high strengths for certain attributes (e.g., 'educational') can lead to a slight decrease in the fluency of the generated text, which was the identified flaw.",
+        "flaw_addressed_quality": 4,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 6,
+        "start_of_flaw_addressed_text": "eftable:toxicity_gpt2 in efappendix:toxicity_gpt2 shows",
+        "end_of_flaw_addressed_text": "GPT-2 model family .",
+        "flaw_addressed_description": "The authors extended the toxicity reduction evaluation to include results for the GPT-2 model family, providing experiments with smaller language models and a broader understanding of the method's applicability across different model scales.",
+        "flaw_addressed_quality": 5,
+        "flaw_addressed_confidence": 5
+    }
+]

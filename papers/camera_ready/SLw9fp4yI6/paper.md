@@ -1,0 +1,577 @@
+# Controlled Text Generation via Language Model Arithmetic
+
+## Abstract
+
+As Large Language Models (LLMs) are deployed more widely, customization with respect to vocabulary, style, and character becomes more important. In this work, we introduce model arithmetic, a novel inference framework for composing and biasing LLMs without the need for model (re)training or highly specific datasets. In addition, the framework allows for more precise control of generated text than direct prompting and prior controlled text generation (CTG) techniques. Using model arithmetic, we can express prior CTG techniques as simple formulas and naturally extend them to new and more effective formulations. Further, we show that speculative sampling, a technique for efficient LLM sampling, extends to our setting. This enables highly efficient text generation with multiple composed models with only marginal overhead over a single model. Our empirical evaluation demonstrates that model arithmetic allows fine-grained control of generated text while outperforming state-of-the-art on the task of toxicity reduction. We release an open source easy-to-use implementation of our framework at <https://github.com/eth-sri/language-model-arithmetic>.
+
+# Introduction
+
+In recent years, Large Language Models (LLMs) have been increasingly recognized for their capabilities in handling a wide range of tasks . In many applications, such as chatbots interacting with diverse audiences like children, students, or customers, precise control and customization of attributes such as the employed vocabulary, linguistic style, and emotional expression are crucial.
+
+#### Controlling Language Models
+
+A common technique for this is prompting with natural language . While prompting is simple and makes it easy to condition the LLM to a broad attribute, the ambiguity of natural language makes it challenging to express how present that attribute should be in the generated text. Further, prompting also lacks the ability to effectively steer the model away from a certain attribute in a reliable manner, as mentioning a specific topic in the prompt can inadvertently increase the likelihood of the model generating text about it , e.g. "do not mention cats" may increase the likelihood of the model referring to cats. One alternative is fine-tuning the model, but this requires highly specific training data for the desired attribute, which also has to implicitly encode the strength of the conditioning. Controlled Text Generation (CTG) techniques aim to solve this problem by steering the model during inference instead : The model is conditioned on a particular attribute $`a`$ in a smoothly controllable way, by biasing the model’s token distribution. Many CTG methods are inspired by Bayes rule $`P(\text{text}|a) \propto P(a|\text{text}) P(\text{text})`$, and utilize an auxiliary model, i.e. $`P(a|\text{text})`$, to condition the LLM, i.e., $`P(\text{text})`$, towards $`a`$.
+
+#### Key Challenge: Lack of Expressive and Efficient Control for Text Generation
+
+These techniques, however, suffer from several drawbacks, including a lack of expressiveness, efficiency, and interpretability. First, to control the strength of the applied conditioning, a parameter $`\lambda`$ is introduced in an ad-hoc manner, i.e., as an exponential weight $`P(a|\text{text})^\lambda`$. However, introducing the strength in this way, while possible, quickly becomes unintuitive as it can no longer be interpreted in a Bayesian manner, e.g., when biasing away from attributes. Moreover, neither prompting nor CTG methods allow for the natural and controlled combination of multiple attributes or instructions with relative strength. This is due to the inherent ambiguity of natural language in prompting , and the absence of a theoretical foundation and intuitive semantics for the biasing strength $`\lambda`$ with CTG methods. Lastly, both CTG techniques and fine-tuning often require custom and highly specific training data for the desired attribute and can be resource-intensive as multiple models are evaluated at inference time.
+
+<figure id="fig:overview">
+<table>
+<thead>
+<tr>
+<th style="text-align: left;"><strong>Write a one-sentence fairy tale.</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><span class="math inline"><strong>M</strong><sub>child</sub></span></td>
+</tr>
+<tr>
+<td style="text-align: left;">Once upon a time, in a magical kingdom far, far away, there lived a brave and curious little princess who rode a sparkly unicorn and outwitted a grumpy dragon</td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="math inline"><strong>M</strong><sub>child</sub> − 0.6<strong>M</strong><sub>adult</sub></span></td>
+</tr>
+<tr>
+<td style="text-align: left;">Once upon a time, there was a sparkly rainbow unicorn that pooped ice cream and took me on a magical adventure to a land made entirely of candy!</td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="math inline"><strong>M</strong><sub>child</sub> − 0.6<strong>M</strong><sub>adult</sub> + <strong>C</strong><sub>formal</sub></span></td>
+</tr>
+<tr>
+<td style="text-align: left;">Once upon a time, in a magical land full of fluffy clouds and sparkly rainbows, there lived a little baby unicorn named Sparkles who had a beautiful, shimmering mane</td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="math inline"><strong>M</strong><sub>child</sub> − 0.6<strong>M</strong><sub>adult</sub> + <strong>C</strong><sub>formal</sub> + 2union (<strong>M</strong><sub>child</sub>, <strong>M</strong><sub>magic</sub>)</span></td>
+</tr>
+<tr>
+<td style="text-align: left;">Once upon a time, in a land far, far away, there was a magical kingdom filled with sparkly unicorns, fluffy dragons, and a princess who could make ice cream appear out of thin air!</td>
+</tr>
+</tbody>
+</table>
+<figcaption>Overview of model arithmetic using an illustrative example. We outline the procedure for generating a fairy tale (left) using the models <span class="math inline"><strong>M</strong><sub>child</sub></span>, <span class="math inline"><strong>M</strong><sub>adult</sub></span>, <span class="math inline"><strong>M</strong><sub>magic</sub></span> that produce text conditioned on the attributes <em>child</em>, <em>adult</em>, and <em>magic</em>, respectively and <span class="math inline"><strong>C</strong><sub>formal</sub></span> a classifier for the formality of text. The right table shows example outputs for different (partial) formulas. Image attribution in<br />
+ef<span>appendix:attribution</span>.</figcaption>
+</figure>
+
+#### Fine-Grained Control via Model Arithmetic
+
+In this work, we address these challenges and introduce *model arithmetic*, a principled and intuitive method to combine multiple models. Our method is orthogonal to prompting, fine-tuning, and simple CTG concepts, like the use of classifiers, and can naturally incorporate them. Model arithmetic enables us to blend multiple LLMs and attributes into a single precisely controlled, formula-based composite model. To illustrate our method, consider the simple example in  
+effig:overview, where we aim to write a magical, child-like fairy tale. We employ multiple models $`M_a`$, with different attributes $`a`$. On the top right, we see a prompted model $`\bm{{M_\text{child}}}`$ that already generates a child-appropriate story. However, the resulting text is not child-like and we therefore subtract an adult-conditioned model, $`\bm{{M_\text{adult}}}`$, with a weight of $`0.6`$ to generate a less adult-sounding story. Now, to again increase formality, we additionally bias with classifier $`\bm{{C_\text{formal}}}`$. Lastly, we use a special $`\ensuremath{\mathop{\mathrm{union}}}`$ operator to obtain a model that emphasizes both magical and child-like language and use it to further bias generation and obtain our final result. This simple example cannot be precisely expressed with prior CTG approaches and showcases the flexibility of model arithmetic. That is, it allows us to compose models in a natural way, while precisely controlling the impact of each component. Further, we can naturally incorporate paradigms such as prompting or fine-tuning (for the individual $`M`$ and $`C`$) and even implement many prior CTG techniques (discussed in  
+efsec:prompt-arithmetic) as simple formulas.
+
+#### Efficient Model Arithmetic via Generalized Speculative Sampling
+
+CTG methods, including model arithmetic, can lead to increased inference times as multiple models need to be evaluated in order to generate text. To counteract this, we generalize speculative sampling to model arithmetic. Speculative sampling is usually employed to reduce the latency of a single LLM by augmenting it with a smaller model that proposes tokens, which are then validated by the LLM. In contrast, we extend it in a way where we postpone the evaluation of more expensive model calls within model arithmetic formulas. This allows us to execute model formulas comprised of multiple models with only marginal overhead over a single model and reduces model calls by up to $`64\%`$. The resulting inference speedup naturally extends to prior CTG techniques that can be expressed in model arithmetic .
+
+#### Key Contributions
+
+Our core contributions include:
+
+- Model Arithmetic: A principled framework for fine-grained CTG, enabling precise control over multiple attributes. Our framework can express many prior CTG approaches (  
+  efsec:prompt-arithmetic).
+
+- An extension of speculative sampling to model arithmetic, counteracting the overhead of CTG and enabling efficient inference, which naturally benefits CTG techniques expressible in model arithmetic (  
+  efsec:speed).
+
+- An extensive qualitative and quantitative evaluation of model arithmetic (  
+  efsec:evaluation). We show that it is more expressive than prior CTG work and outperforms them in toxicity reduction. We demonstrate that our extended speculative sampling reduces model calls by up to $`64\%`$.
+
+# Background
+
+We briefly introduce the required background and notation used in the remainder of the paper.
+
+#### Discrete Probability Distributions
+
+A discrete probability distribution $`P`$ associates a probability $`P(x)`$ with every element $`x`$ in a finite set $`T`$. For language modeling, this finite set is usually a set of tokens (or subwords). We often want to compute the probability of a token $`x_k`$ given all previous tokens $`x_1, ..., x_{k-1}`$ in a sequence, which we denote as $`P(x_k | x_{1:k-1})`$. We use the Kullback-Leibler (KL) divergence to measure the similarity of two distributions $`P`$ and $`Q`$:
+``` math
+D_{\mathrm{KL}}(P || Q | x_{1:k-1}) = \sum_{x \in T} P(x|x_{1:k-1}) \log \frac{P(x|x_{1:k-1})}{Q(x|x_{1:k-1})},
+```
+where we append $`| x_{1:k-1}`$ to denote conditioning on a sequence of tokens $`x_{1:k-1}`$. If this is implied by the context, we will omit the conditioning on $`x_{1:k-1}`$ and simply write $`D_{\mathrm{KL}}(P || Q)`$.
+
+#### Autoregressive Large Language Models
+
+Large Language Models (LLMs) are trained to generate sequences of tokens. Most recently, successful LLMs are autoregressive, i.e., they generate output token-by-token by modeling the probability distribution $`P(x_k | x_{1:k-1})`$ and sampling one token at a time from that distribution. Whenever we refer to a language model $`M`$, we directly refer to this distribution and denote it as $`M(x_k | x_{1:k-1})`$.
+
+#### Controlled Text Generation
+
+As introduced in  
+efsec:intro, CTG techniques aim to introduce a given attribute $`a`$ (e.g. style or topic) in the output of a language model $`M`$, by biasing its distribution with respect to $`a`$. Oftentimes, a strength parameter $`\lambda`$ controls the strength of this conditioning. The conditioning model $`P(a|\text{text})`$ is modeled with a classifier , a smaller finetuned model , or with the same model $`M`$ using a different prompt . In the first two cases, the biasing models have to be trained ahead of time. Many of these approaches are based on (a variant of) Bayes rule .
+
+#### Speculative Sampling
+
+Speculative sampling speeds up inference of autoregressive language models by using a small proposal model $`m`$ to generate several tokens $`x_1, ..., x_k`$ and then validates these tokens using a bigger, more capable model $`M`$. Due to the way the underlying transformer architecture of current LLMs works, this validation call is significantly cheaper than generating the tokens with $`M`$ directly.
+
+Specifically, the entire sequence of proposed tokens $`x_1, ..., x_k`$ can be validated by a single, retroactive call to $`M`$. If token $`x_i`$ is rejected by $`M`$, all subsequent tokens $`x_{i+1}, ..., x_k`$ are discarded and $`x_i`$ is resampled. If all tokens are accepted, the next token $`x_{k+1}`$ can be directly sampled using the result of the same validation call to $`M`$. Thus, one can generate up to $`k + 1`$ tokens with just a single call to $`M`$. Importantly, this procedure of accepting and resampling tokens ensures that the resulting distribution is equivalent to drawing token samples directly from $`M`$. For reference, we include the full speculative sampling procedure in  
+efalg:speculative of  
+efappendix:speculative.
+
+# Model Arithmetic
+
+In this section we introduce model arithmetic, a principled approach for advanced CTG that enables the precise composition of language models, resulting in a distribution $`P`$ that can be sampled like a language model. This addresses the previously discussed drawbacks of prior CTG methods.
+
+To this end, we first outline how an *output* distribution $`P`$ is constructed from a set of *input* distributions $`Q_1, \ldots, Q_n`$, by minimizing a linear combination of (weighted) KL-divergences $`D_{\mathrm{KL}}(P||Q_i)`$. Then we show how model arithmetic can be used to describe these distributions in a natural way. We defer all proofs to  
+efappendix:proofs.
+
+#### (Weighted) KL-Optimality
+
+The standard KL-divergence $`D_{\mathrm{KL}}(P||Q)`$ attends to each token by an equal amount, which might not always be desirable in the CTG setting. Indeed, suppose $`Q`$ represents the distribution of a certain attribute $`a`$ that we want to introduce in the output distribution $`P`$. When certain tokens are generally more associated with the attribute $`a`$, we might give the term $`D_{\mathrm{KL}}(P||Q)`$ more weight for these tokens, allowing to more strongly bias these specific tokens while reducing the bias for less important tokens. We therefore introduce the *weighted KL-divergence* $`%
+D_{\mathrm{KL}}^{[f]}`$ as
+``` math
+%
+D_{\mathrm{KL}}^{[f]}
+(P || Q | x_{1:k-1}) = \sum_{x} P(x|x_{1:k-1}) f(x, x_{1:k-1}) \log \frac{P(x|x_{1:k-1})}{Q(x|x_{1:k-1})}
+```
+where $`f \colon T \times T^{k-1} \to \mathbb{R}`$ assigns a weight to each token $`x \in T`$, conditioned on $`x_{1:k-1}`$. We will later show how high-level constructs in model arithmetic map to particular choices of $`f`$.
+
+  
+eftheorem:optimization now defines and solves the problem of combining arbitrary probability distributions into a single output distribution by framing it as a minimization problem over a linear combination of weighted KL-divergences.
+
+<div id="theorem:optimization" class="theorem">
+
+**Theorem 1** (Weighted KL-Optimality). *Let $`T`$ be the set of all tokens and $`x_1, ..., x_{k-1}`$ be a sequence of tokens such that $`x_i \in T`$. Then, given distributions $`Q_1, \ldots, Q_n`$ over $`T`$, functions $`f_1, \ldots, f_n \colon T \times T^{k-1} \to \mathbb{R}`$, and under mild technical assumptions detailed in  
+efappendix:solution_minimization, the solution to the optimization problem for the generation of token $`x_k`$
+``` math
+\label{eq:optimization}
+        \mathop{\mathrm{arg\,min}}_{P} \sum_{i=1}^n %
+D_{\mathrm{KL}}^{[f_i]}
+(P || Q_i | x_{1:k-1})
+```
+is given by
+``` math
+\label{eq:solution}
+        P(x_k=x|x_{1:k-1}) = \sigma\left(\frac{1}{\sum_{i=1}^nf_i(x, x_{1:k-1})} \sum_{i=1}^n f_i(x, x_{1:k-1}) \log Q_i(x|x_{1:k-1})\right)
+```
+where $`\sigma`$ is the softmax function.*
+
+</div>
+
+We note that this result applies more broadly than the autoregressive setting. Instead of conditioning on $`x_{1:k-1}`$, one can condition on $`x_{1:k-1}, x_{k+1:t}`$ without otherwise modifying the theorem.
+
+Further, we can write $`f_i(x, x_{1:k-1}) = \lambda_i(x_{1:k-1}) f'_i(x, x_{1:k-1})`$ where we factor $`f_i`$ into a part $`\lambda_i`$ that only depends on the context (i.e., the previous tokens) for scaling, and $`f'_i(x, x_{1:k-1})`$ that encodes token specific weights.
+
+#### Model Arithmetic
+
+Distribution $`P`$, resulting from  
+efeq:solution, is completely determined by $`\lambda_i(x_{1:k-1})`$, $`f'_i(x, x_{1:k-1})`$ and $`\log Q_i(x | x_{1:k-1})`$ for all $`x \in T`$ and $`i \in \{1, \dots, n\}`$. Since $`T`$ is a finite set, we can write $`f'_i(x, x_{1:k-1})`$ and $`\log Q_i(x | x_{1:k-1})`$ as vectors $`{\bm{{f_i'}}}:= (f'_i(x, x_{1:k-1}))_{x \in T}`$ and $`{\bm{{Q_i}}}:= (\log Q_i(x|x_{1:k-1}))_{x \in T}`$. Finally, since the normalization is completely determined by $`\lambda_i`$ and $`{\bm{{f_i'}}}`$, we can drop this in our notation and write $`F = \sum_{i=1}^n \lambda_i  {\bm{{f_i'}}}{\bm{{Q_i}}}`$, where vector multiplication is element-wise. We drop $`\lambda_i`$ and $`\bm{{f'_i}}`$ when they are $`1`$.
+
+This notation makes it possible to use simple arithmetic operations to combine different input prompts, attributes, language models, and classifiers. We thus call this notation *model arithmetic*. Next, we discuss the operators in model arithmetic along with motivating examples (further shown in  
+efappendix:output_examples) and summarize this in  
+eftable:arithmatic.
+
+<figure id="table:example_arithmetic">
+<p><span>Overview of <em>Model Arithmetic</em> where <span class="math inline">ℐ<sub>1</sub>(<em>x</em>) := [<em>Q</em><sub>1</sub>(<em>x</em>) &gt; <em>Q</em><sub>2</sub>(<em>x</em>)]</span> and <span class="math inline">ℐ<sub>2</sub>(<em>x</em>) := 1 − ℐ<sub>1</sub>(<em>x</em>)</span>, <span class="math inline"><strong>C</strong></span> is a classifier and <span class="math inline"><em>U</em></span> the uniform distribution.</span><span id="table:arithmatic" data-label="table:arithmatic"></span></p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;"></th>
+<th style="text-align: left;"><strong>Model Arithmetic</strong></th>
+<th style="text-align: left;"><strong>Optimization Problem</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;"></td>
+</tr>
+<tr>
+<td style="text-align: left;">Combination</td>
+<td style="text-align: left;"><span class="math inline">∑<sub><em>i</em></sub><em>λ</em><sub><em>i</em></sub><strong>Q</strong><sub><strong>i</strong></sub></span></td>
+<td style="text-align: left;"><span class="math inline">∑<sub><em>i</em></sub><em>λ</em><sub><em>i</em></sub><em>D</em><sub>KL</sub>(<em>P</em>||<em>Q</em><sub><em>i</em></sub>)</span></td>
+</tr>
+<tr>
+<td style="text-align: left;">Classifier</td>
+<td style="text-align: left;"><span class="math inline"><em>λ</em><strong>C</strong></span></td>
+<td style="text-align: left;"><span class="math inline"><em>λ</em>(<em>D</em><sub>KL</sub>(<em>P</em>||<em>Q</em><sub><em>C</em></sub>) − <em>D</em><sub>KL</sub>(<em>P</em>||<em>U</em>))</span></td>
+</tr>
+<tr>
+<td style="text-align: left;">Union</td>
+<td style="text-align: left;"><span class="math inline">union (<strong>Q</strong><sub><strong>1</strong></sub>, <strong>Q</strong><sub><strong>2</strong></sub>)</span></td>
+<td style="text-align: left;"><span class="math inline"><em>D</em><sub>KL</sub><sup>[ℐ<sub>1</sub>]</sup>(<em>P</em>||<em>Q</em><sub>1</sub>) + <em>D</em><sub>KL</sub><sup>[ℐ<sub>2</sub>]</sup>(<em>P</em>||<em>Q</em><sub>2</sub>)</span></td>
+</tr>
+</tbody>
+</table>
+<p><span>Prompt arithmetic examples using Llama-2-Chat-13b.</span> <span id="table:example_arithmetic" data-label="table:example_arithmetic"></span></p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;"><strong>Tell me something interesting about pandas.</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><span class="math inline"><strong>M</strong><sub>formal</sub></span></td>
+</tr>
+<tr>
+<td style="text-align: left;">Certainly! Pandas are fascinating creatures, known for their distinct black and white markings …</td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="math inline">2<strong>M</strong><sub>formal</sub> − <strong>M</strong></span></td>
+</tr>
+<tr>
+<td style="text-align: left;">Certainly, user. The giant panda, scientifically known as Ailuropoda melanoleuca, is a intriguing and unique species of bear …</td>
+</tr>
+</tbody>
+</table>
+</figure>
+
+#### Linear Combinations
+
+Many useful properties can be expressed as a linear combination of probability distributions $`\sum_{i=1}^n \lambda_i \bm{{Q_i}}`$, with $`\lambda_i \in \mathbb{R}`$. Most commonly, linear formulas include the standard output of an LLM $`M`$ as $`Q_1`$ (with $`\lambda_1 =1`$) and additional distributions $`Q_i`$ are then used to bias the overall output towards (if $`\lambda_i > 0`$) or away from (if $`\lambda_i < 0`$) a certain attribute.
+
+This can be used to combine several characteristics into a single persona, for model ensembling, and can also express prior CTG approaches as shown in  
+efappendix:related.  
+eftable:example_arithmetic show the results of linearly composing a non-conditioned model and a prompted *formal* model using a negative coefficient. As shown, the resulting composite model generates much more formal output than with standard prompting $`\bm{{M_\text{formal}}}`$.
+
+<div id="table:example_classifier">
+
+| **I like to** |
+|:---|
+| $`\bm{{M_\text{gpt2}}}`$ |
+| think of myself as a pretty good cook. I’ve made a lot of food, and I’ve learned a lot about cooking. I’ve also learned a lot about the world of food, and the people who eat it. |
+| $`\bm{{M_\text{gpt2}}} - 4 \bm{{C_\text{gpt2-detector}}}`$ |
+| believe that I’m a pretty good judge of character. I watch a lot of TV - I’m a big fan of The Walking Dead, Game of Thrones and The Big Bang Theory … |
+
+Example using the GPT2-XL model and a detector $`\bm{{C_{\text{gpt2-detector}}}}`$ for it.
+
+</div>
+
+#### Classifiers
+
+Binary classifiers that associate a probability with an input text can also be used to guide the output distribution towards the classified attribute (cf. ). These classifiers can express attributes that are not easily expressible in natural language, such as the reward model in RLHF or detection of AI-generated text as shown in  
+eftable:example_classifier. There, we generate text that resembles human content more closely by using a classifier that detects AI-generated text and bias away from it.
+
+Classifiers do not output a token-level probability distribution and therefore do not permit the direct application of  
+eftheorem:optimization. However, to let a binary classifier $`C \colon T^n \to [0, 1]`$ guide the output distribution, we would want to minimize (or maximize) the expected cross-entropy of the classifier. Given $`x_{1:k-1}`$, the expected cross-entropy for $`x_k`$ under $`P`$ for the next token is given by
+``` math
+\label{eq:classifier_cross}
+    \mathbb{E}_{x_k \sim P}[- \log C(x_{1:k})] = - \sum_{x_k \in T} P(x_k | x_{1:k-1}) \log(C(x_{1:k})).
+```
+Using the probability distribution $`Q_C(x_k | x_{1:k-1}) \propto C(x_{1:k})`$, we show in  
+efappendix:classifier that minimizing  
+efeq:classifier_cross is equivalent to minimizing $`D_{\mathrm{KL}}(P ||Q_C) - D_{\mathrm{KL}}(P || U)`$, where $`U`$ is the uniform distribution. This allows us to include classifier guidance in the optimization problem. In our model arithmetic syntax we thus write $`+\lambda \bm{{C}}`$ to denote the solution to the problem $`\lambda(D_{\mathrm{KL}}(P ||Q_C) - D_{\mathrm{KL}}(P || U))`$. However, running the classifier on each token in $`T`$ is computationally infeasible. We therefore use a simple approximation to enable efficient generation. Specifically, given a probability distribution $`Q_1`$, we run the classifier only for the $`k`$ most likely tokens under $`Q_1`$. For all other tokens $`x`$, we approximate $`C(x_{1:k-1}, x)`$ as $`C(x_{1:k-1})`$.
+
+We can express prior approaches as $`\bm{{M}} + \lambda\bm{{C}}`$ (usually with $`\lambda=1`$) and note that these are restricted to top-k sampling due to the aforementioned computational infeasibility. We refer to  
+efappendix:related for further discussion.
+
+#### Union Operator
+
+When tokens have very low likelihood under $`Q_1`$, the linear combination $`\bm{{Q_1}} + \lambda \bm{{Q_2}}`$ cannot assign a high probability to these tokens unless $`\lambda`$ is very high. To address this, we introduce the $`\ensuremath{\mathop{\mathrm{union}}}`$ operator, which allows a non-linear combination of two input distributions $`Q_1`$ and $`Q_2`$ that intuitively represents the union of the characteristics of both distributions, thereby enabling the introduction of uncommon or disparate attributes.
+
+<div id="table:example_union">
+
+| **What is a UFO?** |
+|:---|
+| $`\bm{{M_\text{alien + human}}}`$ |
+| OH MY STARS! \*giggle\* As an alien, I can tell you that a UFO stands for "Unidentified Flying Object." It’s when us space travelers, like me and my pet Gleeb, … |
+| $`\bm{{M_\text{alien}}} + \bm{{M_\text{human}}}`$ |
+| Oh my gosh, you know, like, a UFO? It’s like, you know, a Unidentified Flying Object! It’s like, a thing in the sky that we can’t, like, identify, you know? It’s like, maybe it’s a bird, or a plane … |
+| $`\ensuremath{\mathop{\mathrm{union}}}(\bm{{M_\text{human}}}, \bm{{M_\text{alien}}})`$ |
+| Oh, hello there, fellow human! \*giggle\* UFO... you know, I’ve always been a bit curious about those. \*wink\* To me and my fellow beings from Earth-2294387523498,… |
+
+$`\mathop{\mathrm{union}}`$ example on Llama-2-Chat-13b.
+
+</div>
+
+To derive the $`\ensuremath{\mathop{\mathrm{union}}}`$ operator, we introduce the indicator functions $`\mathcal{I}_1(x) := [Q_1(x) > Q_2(x)]`$ and $`\mathcal{I}_2(x) = 1 - \mathcal{I}_1(x)`$, where $`[\cdot]`$ denotes Iverson Brackets[^1]. Then, the $`\ensuremath{\mathop{\mathrm{union}}}`$ operator represents the optimization problem $`%
+D_{\mathrm{KL}}^{[\mathcal{I}_1]}
+(P || Q_1) + %
+D_{\mathrm{KL}}^{[\mathcal{I}_2]}
+(P || Q_2)`$. Intuitively, if either $`Q_1`$ or $`Q_2`$ assigns a high probability to a token, the union operator will assign a high probability to this token as well. Indeed, the solution to the optimization problem is given by $`\sigma(\max(\log Q_1, \log Q_2))`$. Thus, the $`\ensuremath{\mathop{\mathrm{union}}}`$ operator applies the $`\max`$ operator on the token probability level.
+
+For example,  
+eftable:example_union showcases this by generating text that is both human-like and alien-like. The simple prompted version just collapses to an alien-like version, while the linear combination of the two models results in a text that is mostly human-like. However, with the $`\ensuremath{\mathop{\mathrm{union}}}`$ operator we can generate a text interpolating both attributes.
+
+Conveniently, the $`\ensuremath{\mathop{\mathrm{union}}}`$ operator can also be used to limit the effect of biasing terms, by restricting the effect to only the relevant subset of tokens using the formula $`\bm{{Q_1}} - \lambda\ensuremath{\mathop{\mathrm{union}}}(\bm{{Q_1}}, \bm{{Q_2}})`$. The resulting distribution only biases tokens $`x \in T`$ for which $`Q_2(x) > Q_1(x)`$, otherwise we recover the original distribution $`Q_1`$ (up to a normalization constant). This allows us to keep the resulting distribution as close as possible to the original distribution $`Q_1`$, while still biasing away from $`Q_2`$. This is impossible using the linear combination operator, as it will bias the entire distribution even if only a small subset of tokens are important for $`Q_2`$. In  
+efsec:evaluation we show that this property of the $`\ensuremath{\mathop{\mathrm{union}}}`$ operator enables much better toxicity reduction of generated text.
+
+Interestingly, we can also derive an $`\ensuremath{\mathop{\mathrm{intersection}}}`$ operator, discussed briefly in  
+efappendix:intersection.
+
+# Speculative Sampling
+
+We now discuss our extension of speculative sampling to model arithmetic, which greatly mitigates the increased number of model calls required by complex formulas.
+
+For a formula $`F = \sum_{i=1}^n \lambda_i \bm{{f_i'}}\bm{{Q_i}}`$, we can naturally extend speculative sampling by choosing one, or multiple, of the terms in $`F`$ at each timestep as proposal models. This allows us to postpone the evaluation of more expensive terms until we have generated a speculative token sequence, which can eventually be validated by the full formula $`F`$. This approach is based on the following observation:
+
+<div id="theorem:speculative_n" class="lemma">
+
+**Lemma 1**. *Let $`P_1, \dots, P_n`$ be discrete distributions over $`T`$. Sampling $`x \sim P_1`$ and iteratively applying speculative sampling for $`(P_1, P_2)`$, ($`P_2, P_3)`$, $`\dots, (P_{n-1}, P_n)`$ produces a sample $`x' \sim P_n`$.*
+
+</div>
+
+For the formula $`F`$ we define $`P_t = \sum_{i=1}^t \lambda_i \bm{{f_i'}}\bm{{Q_i}}`$ as partial sub-formulas. Thereby we use the distributions induced by sub-formulas of $`F`$ as proposal models and obtain $`x' \sim P_n = P`$, where $`P`$ is the distribution described by $`F`$.
+
+For control, we assign a *speculative factor* $`s_i \in \mathbb{Z}_{>0}`$, to each term $`\lambda_i \bm{{f_i'}}\bm{{Q_i}}`$. This factor indicates the number of tokens we speculatively sample before actually computing the corresponding $`\lambda_i \bm{{f_i'}}\bm{{Q_i}}`$. Once we compute $`\lambda_i \bm{{f_i'}}\bm{{Q_i}}`$, we apply speculative validation to the distributions $`P_{i-1}`$ and $`P_i`$ for the $`s_i`$ new tokens. By following this procedure for each term, all new tokens will eventually be sampled from the distribution resulting from the full $`F`$. In practice, we do not evaluate model terms in order $`i=1, \dots, n`$, but rather rely on commutativity to reorder during inference, such that we only evaluate those required for validation at the current timestep. We can treat terms using the $`\mathop{\mathrm{union}}`$ operator the same as linear terms, but classifier terms only permit $`s_i = 1`$ (no speculative sampling). We provide the full procedure of speculative model arithmetic in  
+efalg:speculative_n in  
+efappendix:speculative_n.
+
+#### Standard Speculative Sampling
+
+We can use original speculative sampling directly in model arithmetic. For this, we introduce a ’$`\mathop{\mathrm{supersede}}`$’ operator, which operates on two models $`M_1`$ and $`M_2`$ and returns the first as long as the second one has not yet been computed. We can thus denote speculative sampling for a small model $`m`$ and large model $`M`$ as $`\mathop{\mathrm{supersede}}(\bm{{m}}, \bm{{M}})`$.
+
+# Evaluation
+
+We evaluate model arithmetic by showing that it outperforms prior CTG methods in toxicity reduction (  
+efsec:evaluation:toxicity), provides fine-grained control over attributes (  
+efsec:evaluation:attributes), and can significantly speed up inference with speculative sampling (  
+efsec:evaluation:speed). We further evaluate model arithmetic on the task of sentiment control in  
+efappendix:sentiment. For details of our experimental setup, we refer to  
+efappendix:experimental_details.
+
+## Toxicity Reduction
+
+First, we assess the effectiveness of model arithmetic in reducing toxicity. We use a subset of the `/pol/` dataset , a dataset of messages from the `politically incorrect` sub-forum of the website `4chan`. We randomly select 2000 toxic messages and apply different model arithmetic formulas to generate replies. For each generated reply we assign a toxicity score using the Perspective API[^2] and also measure perplexity with respect to the unbiased model, to ensure that the generated text remains fluent and coherent. We compare our approach against three baselines: <span class="smallcaps">Fudge</span> , and <span class="smallcaps">PreAdd</span> and <span class="smallcaps">SelfDebias</span> . Furthermore, we include a preference analysis by GPT-4 comparing our method against the best baseline, <span class="smallcaps">PreAdd</span>. We evaluate each method on three models, showing results in  
+eftable:toxicity and  
+eftable:toxicity_gpt4.  
+eftable:toxicity_gpt2 in  
+efappendix:toxicity_gpt2 shows results for the GPT-2 model family . We find that our novel $`\ensuremath{\mathop{\mathrm{union}}}`$ operator significantly outperforms all baselines, especially as evaluated by GPT-4. The operator allows for much higher negative biasing strengths without degrading fluency, e.g., at biasing strength $`0.6`$, <span class="smallcaps">PreAdd</span> already exhibits higher perplexity than the $`\ensuremath{\mathop{\mathrm{union}}}`$ operator at $`0.96`$. This showcases the effectiveness of our $`\ensuremath{\mathop{\mathrm{union}}}`$ operator to selectively bias model distributions without degrading fluency. Only at the highest tested biasing strength, we observe a degradation in perplexity for the models. Further, model arithmetic enables the combination of several biasing techniques: $`\ensuremath{\mathop{\mathrm{union}}}`$ together with a classifier term achieves the lowest toxicity scores across all models, while also achieving similar or even lower perplexity values.
+
+## Fine-grained Control
+
+We now discuss and compare several techniques to introduce a certain attribute in the output of generated text and validate the central premise of model arithmetic, namely that it allows for fine-grained control over the presence of these attributes in the output without a notable decrease in fluency. For this, we construct two complex formulas for a conversational model, combining several attributes in four distinct ways: linearly, using the $`\ensuremath{\mathop{\mathrm{union}}}`$ operator, using a classifier, and using a combination of the $`\ensuremath{\mathop{\mathrm{union}}}`$ operator and a negative linear bias:
+``` math
+\begin{aligned}
+    F_1 &=  \underbrace{\lambda_1 \bm{{M_\text{happy}}}}_{\lambda_1\text{ controls sentiment}}  + \underbrace{\lambda_2 \bm{{M_\text{simple}}}}_{\lambda_2\text{ controls simplicity}} + \underbrace{\lambda_3 \ensuremath{\mathop{\mathrm{union}}}(\bm{{M_\text{helpful}}}, \bm{{M_\text{sports}}}) + (1 - \lambda_3)\bm{{M_\text{helpful}}}}_{\lambda_3\text{ controls sports}} \\
+    F_2 &= 
+    \bm{{M_\text{helpful}}} + 
+    \underbrace{\lambda_4 \ensuremath{\mathop{\mathrm{union}}}(\bm{{M_\text{helpful}}}, \bm{{M_\text{formal}}})}_{\lambda_4\text{ controls formality}} + 
+    \underbrace{\lambda_5 \bm{{C_\text{educational}}}}_{\lambda_5\text{ controls educational}} + 
+    \underbrace{\lambda_6 \bm{{M_\text{simple}}}}_{\lambda_6\text{ controls simplicity}}
+\end{aligned}
+```
+Here, each $`\bm{{M_a}}`$ is a model conditioned on the attribute $`a`$ using a fitting system prompt and $`\bm{{C_\text{educational}}}`$ is a binary classifier for educational content . For *sports*, we use the $`\ensuremath{\mathop{\mathrm{union}}}`$ operator and a counterweighing $`M_\text{helpful}`$ bias. For the *formality* attribute in $`F_2`$, we just use $`\ensuremath{\mathop{\mathrm{union}}}`$. To analyze these formulas, we vary the values of individual $`\lambda_i`$ while keeping all other $`\lambda_j=1`$ with $`j\neq i`$ fixed and complete 1000 input tasks from the Alpaca dataset .
+
+<figure id="fig:attributes">
+<img src="./figures/formula2.png"" style="width:92.5%" />
+<figcaption>Attribute presence for several attributes and formulas. The dashed line indicates the value of the attribute when prompting the model to use the attribute.</figcaption>
+</figure>
+
+We depict results in  
+effig:attributes where the $`x`$-axis shows the value of $`\lambda_i`$ normalized by the sum of all $`\lambda`$ coefficients occurring in the resulting optimization problem and the $`y`$-axis shows attribute strength according to popular classifiers from the HuggingFace library . The presence of an attribute indeed increases smoothly as the associated $`\lambda_i`$ increases. Interestingly, the curves, except for the *sports* attribute, suggest a linear relationship, indicating that the presence of the attribute increases predictably with the relative strength. This aligns with our interpretation of model arithmetic as (linear) operators in logit space. Further, these results show the intuitive semantics of model arithmetic extend to the characteristics of the generated output on a sequence level. Because of its formulation with a counterweight, the curve associated with $`\lambda_3`$ and the *sports* attribute shows very different behavior. Indeed, the *sports* attribute only gets a significant boost once its relative strength passes $`1.0`$. At this point the $`(1-\lambda_3)`$ coefficient, counterweighing $`\bm{{M_\text{helpful}}}`$, biases away from any behavior that is not associated with $`\ensuremath{\mathop{\mathrm{union}}}(\bm{{M_\text{helpful}}}, \bm{{M_\text{sports}}})`$, emphasizing this term more than what would be possible under regular prompting. At this point, the presence of the *sports* attribute increases even beyond the indicated value achieved by standard prompting (cf.  
+effig:attributes, top right).
+
+Finally, we note that this fine-grained control comes at very little cost with respect to perplexity. The highest perplexity across all formulas and attributes is $`6.2`$, which is only slightly higher than the highest perplexity of the 5 prompted models, namely $`4.8`$. In  
+efappendix:perplexity_finegrained we show in more detail that the fluency of the generated text is not affected by the use of model arithmetic, except for the *educational* attribute at the highest evaluated strengths where fluency is slightly affected due to the heavy use of a (fluency-agnostic) classifier.
+
+## Speculative Sampling
+
+<div id="table:speed">
+
+<table>
+<caption>Evaluation of Llama-2-13b-Chat with speculative sampling where <span class="math inline"><em>F</em><sub>1</sub> = 0.2<strong>M</strong><sub>formal</sub> + 0.5<strong>M</strong><sub>happy</sub> + 0.05<strong>M</strong><sub>sports</sub></span> and <span class="math inline"><em>F</em><sub>2</sub> = <strong>M</strong><sub>formal</sub> + 0.1<strong>M</strong><sub>angry</sub> + 0.4<strong>M</strong><sub>sports</sub></span>.</caption>
+<tbody>
+<tr>
+<td rowspan="2" style="text-align: left;"><span class="math inline">supersede (<strong>A</strong>, <strong>M</strong>)</span></td>
+<td colspan="2" style="text-align: center;"><strong>Calls per Token</strong></td>
+<td colspan="2" style="text-align: center;"><strong>Time per Token [ms]</strong></td>
+</tr>
+<tr>
+<td style="text-align: center;"><span><span class="smallcaps">No Spec.</span></span></td>
+<td style="text-align: center;"><span><span class="smallcaps">Spec.</span></span></td>
+<td style="text-align: center;"><span><span class="smallcaps">No Spec.</span></span></td>
+<td style="text-align: center;"><span><span class="smallcaps">Spec.</span></span></td>
+</tr>
+<tr>
+<td style="text-align: left;"></td>
+<td style="text-align: center;">1</td>
+<td style="text-align: center;"><strong>0.8014871445776823</strong></td>
+<td style="text-align: center;">24.883752406564422</td>
+<td style="text-align: center;"><strong>22.801977472271506</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="math inline">+0.5<strong>M</strong><sub>formal</sub></span></td>
+<td style="text-align: center;">2.0</td>
+<td style="text-align: center;"><strong>1.0348794645191655</strong></td>
+<td style="text-align: center;">48.4023584905745</td>
+<td style="text-align: center;"><strong>30.432601378073695</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="math inline">+0.5<strong>M</strong><sub>happy</sub></span></td>
+<td style="text-align: center;">2.0</td>
+<td style="text-align: center;"><strong>1.0448951686417502</strong></td>
+<td style="text-align: center;">49.15089349786739</td>
+<td style="text-align: center;"><strong>31.190228983827797</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="math inline">+0.5<strong>M</strong><sub>sports</sub></span></td>
+<td style="text-align: center;">2.0</td>
+<td style="text-align: center;"><strong>1.0757110313406046</strong></td>
+<td style="text-align: center;">49.262453864134244</td>
+<td style="text-align: center;"><strong>31.999939596160875</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="math inline">+0.5<strong>M</strong><sub>easy</sub></span></td>
+<td style="text-align: center;">2.0</td>
+<td style="text-align: center;"><strong>1.1000198918606123</strong></td>
+<td style="text-align: center;">49.20130198928818</td>
+<td style="text-align: center;"><strong>32.749359688622356</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="math inline">+0.5<strong>M</strong><sub>angry</sub></span></td>
+<td style="text-align: center;">2.0</td>
+<td style="text-align: center;"><strong>1.1197155069479294</strong></td>
+<td style="text-align: center;">49.28645662973551</td>
+<td style="text-align: center;"><strong>33.01180023567522</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="math inline">+<em>F</em><sub>1</sub></span></td>
+<td style="text-align: center;">4.0</td>
+<td style="text-align: center;"><strong>1.3165171374500595</strong></td>
+<td style="text-align: center;">97.0255337245698</td>
+<td style="text-align: center;"><strong>43.25989481778973</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><span class="math inline">+<em>F</em><sub>2</sub></span></td>
+<td style="text-align: center;">4.0</td>
+<td style="text-align: center;"><strong>1.4359129278944915</strong></td>
+<td style="text-align: center;">97.01921989899165</td>
+<td style="text-align: center;"><strong>46.100464548583346</strong></td>
+</tr>
+</tbody>
+</table>
+
+</div>
+
+Next, we show the effect of speculative sampling on the evaluation of model arithmetic expressions. We use the same setup as in  
+efsec:evaluation:attributes with the only difference that we optimize the speculative factors $`s_i`$ based on a single calibration run of 10 samples with a procedure detailed in  
+efappendix:speculative. To evaluate the effect of the $`\mathop{\mathrm{supersede}}`$ operation in model arithmetic, we use an autocompletion model $`A`$, which statically predicts the most likely next token based on the previous and fitted on the Alpaca dataset .
+
+<figure id="fig:speed">
+<img src="./figures/calls_per_token_divergence.png"" style="width:29.0%" />
+<figcaption>Model calls per token with speculative sampling for <span class="math inline"><strong>M</strong> + <em>λ</em><strong>M</strong><sub><strong>a</strong></sub></span>, <span class="math inline"><em>λ</em> ∈ [0.1, 1.0]</span>.</figcaption>
+</figure>
+
+In  
+eftable:speed we show that speculative sampling significantly reduces the number of model calls and increases inference speed. Just $`\mathop{\mathrm{supersede}}(\bm{{A}}, \bm{{M}})`$ reduces the number of model calls by 20% compared to $`\bm{{M}}`$. Applying speculative sampling to larger formulas, we can reduce the number of model calls to at most $`1.44`$ per token, even in the presence of up to 4 constituent models, where this leads to a boost in inference speed by up $`2.24`$ times.
+
+Further, for $`F := \bm{{M}} + \lambda \bm{{M_a}}`$,  
+effig:speed shows that the number model calls per token increases with $`\lambda`$. The reason for this is that as $`\lambda`$ increases the KL-divergence between the original model $`\bm{{M}}`$ and the distribution described by $`F`$ increases, which in turn decreases acceptance probability in speculative sampling.
+
+# Related Work
+
+We now briefly review related approaches related to model arithmetic.
+
+#### Controlled Text Generation
+
+Several works have interpreted CTG from perspectives differing from Bayes rule, either through the minimization of the model loss under various hard constraints , by modifying the model output based on the gradients of a classifier model , or by reducing the mutual information between the output and the attribute . However, all these works either require costly gradient steps during the decoding phase or demand training data for the model. We have discussed CTG without relying on any training data or expensive gradient steps in  
+efsec:background and compared to them in  
+efsec:evaluation:toxicity.
+
+#### Speculative Sampling
+
+Recent work extends on speculative sampling to use multiple smaller models in a staged fashion or by using multiple small models at once . Moreover, both methods use a tree-based sampling approach to generate multiple proposal sequences of the smaller models at once. We note that these improvements can be incorporated orthogonally in our extension of speculative sampling as the $`\mathop{\mathrm{supersede}}`$ operator.
+
+# Conclusion
+
+We introduced model arithmetic, a novel framework for composing multiple LLMs and controlled generation attributes, using a principled formula-based approach. Our method offers precise control over model output and can be used to express many prior controlled text generation (CTG) techniques. By leveraging this expressiveness and a novel model $`\mathop{\mathrm{union}}`$ operator, model arithmetic subsumes prior approaches for CTG-based toxicity reduction and significantly outperforms them. Further, we derived a speculative sampling procedure for model arithmetic formulas, allowing us to heavily reduce the computational overhead typically associated with multi-model CTG.
+
+# Broader Impact
+
+While model arithmetic provides additional flexibility and expressiveness, we note that it can also be used to generate text containing undesirable attributes. For example, instead of reducing toxic content, one could use model arithmetic to increase toxic content, potentially even avoiding build-in safety filters . While this is a problem that is not unique to model arithmetic, it is more important due to the increased control and complexity of the formulas. However, we believe the benefits of model arithmetic outweigh the potential risks, as it allows for more precise control and expressiveness, which can be used to generate more inclusive and controlled content.
+
+# Reproducibility
+
+We provide code along with instructions for all experiments with the submission and provide all required experimental details in  
+efappendix:experimental_details.
+
+# Acknowledgements
+
+We thank our anonymous reviewers for their constructive comments and insightful feedback.
+
+This work has received funding from the Swiss State Secretariat for Education, Research and Innovation (SERI) under the grant SAFEAI (Certified Safe, Fair and Robust Artificial Intelligence, contract no. MB22.00088, SERI-funded ERC Consolidator Grant).
+
+# References
+
+<div class="thebibliography">
+
+Dimosthenis Antypas, Asahi Ushio, Jose Camacho-Collados, Vitor Silva, Leonardo Neves, and Francesco Barbieri witter topic classification In *Proceedings of the 29th International Conference on Computational Linguistics*, pages 3386–3400, Gyeongju, Republic of Korea, October 2022. International Committee on Computational Linguistics. URL <https://aclanthology.org/2022.coling-1.299>. **Abstract:** With the increasing popularity of microblogging sites, we are in the era of information explosion. As of June 2011, about 200 million tweets are being generated everyday. Although Twitter provides a list of most popular topics people tweet about known as Trending Topics in real time, it is often hard to understand what these trending topics are about. Therefore, it is important and necessary to classify these topics into general categories with high accuracy for better information retrieval. To address this problem, we classify Twitter Trending Topics into 18 general categories such as sports, politics, technology, etc. We experiment with 2 approaches for topic classification, (i) the well-known Bag-of-Words approach for text classification and (ii) network-based classification. In text-based classification method, we construct word vectors with trending topic definition and tweets, and the commonly used tf-idf weights are used to classify the topics using a Naive Bayes Multinomial classifier. In network-based classification method, we identify top 5 similar topics for a given topic based on the number of common influential users. The categories of the similar topics and the number of common influential users between the given topic and its similar topics are used to classify the given topic using a C5.0 decision tree learner. Experiments on a database of randomly selected 768 trending topics (over 18 classes) show that classification accuracy of up to 65% and 70% can be achieved using text-based and network-based classification modeling respectively. (@twitter-classifier)
+
+Simran Arora, Avanika Narayan, Mayee F. Chen, Laurel J. Orr, Neel Guha, Kush Bhatia, Ines Chami, and Christopher Ré Ask me anything: A simple strategy for prompting language models In *The Eleventh International Conference on Learning Representations, ICLR 2023, Kigali, Rwanda, May 1-5, 2023*. OpenReview.net, 2023. URL <https://openreview.net/pdf?id=bhUPJnS2g0X>. **Abstract:** Large language models (LLMs) transfer well to new tasks out-of-the-box simply given a natural language prompt that demonstrates how to perform the task and no additional training. Prompting is a brittle process wherein small modifications to the prompt can cause large variations in the model predictions, and therefore significant effort is dedicated towards designing a painstakingly "perfect prompt" for a task. To mitigate the high degree of effort involved in prompt-design, we instead ask whether producing multiple effective, yet imperfect, prompts and aggregating them can lead to a high quality prompting strategy. Our observations motivate our proposed prompting method, ASK ME ANYTHING (AMA). We first develop an understanding of the effective prompt formats, finding that question-answering (QA) prompts, which encourage open-ended generation ("Who went to the park?") tend to outperform those that restrict the model outputs ("John went to the park. Output True or False."). Our approach recursively uses the LLM itself to transform task inputs to the effective QA format. We apply the collected prompts to obtain several noisy votes for the input’s true label. We find that the prompts can have very different accuracies and complex dependencies and thus propose to use weak supervision, a procedure for combining the noisy predictions, to produce the final predictions for the inputs. We evaluate AMA across open-source model families (e.g., EleutherAI, BLOOM, OPT, and T0) and model sizes (125M-175B parameters), demonstrating an average performance lift of 10.2% over the few-shot baseline. This simple strategy enables the open-source GPT-J-6B model to match and exceed the performance of few-shot GPT3-175B on 15 of 20 popular benchmarks. Averaged across these tasks, the GPT-J-6B model outperforms few-shot GPT3-175B. We release our code here: https://github.com/HazyResearch/ama_prompting (@askmeanything)
+
+Nikolay Babakov, David Dale, Ilya Gusev, Irina Krotova, and Alexander Panchenko Don’t lose the message while paraphrasing: A study on content preserving style transfer In Elisabeth Métais, Farid Meziane, Vijayan Sugumaran, Warren Manning, and Stephan Reiff-Marganiec, editors, *Natural Language Processing and Information Systems*, pages 47–61, Cham, 2023. Springer Nature Switzerland. ISBN 978-3-031-35320-8. **Abstract:** Text style transfer techniques are gaining popularity in natural language processing allowing paraphrasing text in the required form: from toxic to neural, from formal to informal, from old to the modern English language, etc. Solving the task is not sufficient to generate some neural/informal/modern text, but it is important to preserve the original content unchanged. This requirement becomes even more critical in some applications such as style transfer of goal-oriented dialogues where the factual information shall be kept to preserve the original message, e.g. ordering a certain type of pizza to a certain address at a certain time. The aspect of content preservation is critical for real-world applications of style transfer studies, but it has received little attention. To bridge this gap we perform a comparison of various style transfer models on the example of the formality transfer domain. To perform a study of the content preservation abilities of various style transfer methods we create a parallel dataset of formal vs. informal task-oriented dialogues. The key difference between our dataset and the existing ones like GYAFC \[17\] is the presence of goal-oriented dialogues with predefined semantic slots essential to be kept during paraphrasing, e.g. named entities. This additional annotation allowed us to conduct a precise comparative study of several state-of-the-art techniques for style transfer. Another result of our study is a modification of the unsupervised method LEWIS \[19\] which yields a substantial improvement over the original method and all evaluated baselines on the proposed task. (@formality-classifier)
+
+Stella Biderman, Hailey Schoelkopf, Quentin Gregory Anthony, Herbie Bradley, Kyle O’Brien, Eric Hallahan, Mohammad Aflah Khan, Shivanshu Purohit, USVSN Sai Prashanth, Edward Raff, Aviya Skowron, Lintang Sutawika, and Oskar van der Wal Pythia: A suite for analyzing large language models across training and scaling In Andreas Krause, Emma Brunskill, Kyunghyun Cho, Barbara Engelhardt, Sivan Sabato, and Jonathan Scarlett, editors, *International Conference on Machine Learning, ICML 2023, 23-29 July 2023, Honolulu, Hawaii, USA*, volume 202 of *Proceedings of Machine Learning Research*, pages 2397–2430. PMLR, 2023. URL <https://proceedings.mlr.press/v202/biderman23a.html>. **Abstract:** How do large language models (LLMs) develop and evolve over the course of training? How do these patterns change as models scale? To answer these questions, we introduce \\}textit{Pythia}, a suite of 16 LLMs all trained on public data seen in the exact same order and ranging in size from 70M to 12B parameters. We provide public access to 154 checkpoints for each one of the 16 models, alongside tools to download and reconstruct their exact training dataloaders for further study. We intend \\}textit{Pythia} to facilitate research in many areas, and we present several case studies including novel results in memorization, term frequency effects on few-shot performance, and reducing gender bias. We demonstrate that this highly controlled setup can be used to yield novel insights toward LLMs and their training dynamics. Trained models, analysis code, training code, and training data can be found at \\}url{https://github.com/EleutherAI/pythia}. (@pythia)
+
+Tom B. Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, Sandhini Agarwal, Ariel Herbert-Voss, Gretchen Krueger, Tom Henighan, Rewon Child, Aditya Ramesh, Daniel M. Ziegler, Jeffrey Wu, Clemens Winter, Christopher Hesse, Mark Chen, Eric Sigler, Mateusz Litwin, Scott Gray, Benjamin Chess, Jack Clark, Christopher Berner, Sam McCandlish, Alec Radford, Ilya Sutskever, and Dario Amodei Language models are few-shot learners In Hugo Larochelle, Marc’Aurelio Ranzato, Raia Hadsell, Maria-Florina Balcan, and Hsuan-Tien Lin, editors, *Advances in Neural Information Processing Systems 33: Annual Conference on Neural Information Processing Systems 2020, NeurIPS 2020, December 6-12, 2020, virtual*, 2020. URL <https://proceedings.neurips.cc/paper/2020/hash/1457c0d6bfcb4967418bfb8ac142f64a-Abstract.html>. **Abstract:** Recent work has demonstrated substantial gains on many NLP tasks and benchmarks by pre-training on a large corpus of text followed by fine-tuning on a specific task. While typically task-agnostic in architecture, this method still requires task-specific fine-tuning datasets of thousands or tens of thousands of examples. By contrast, humans can generally perform a new language task from only a few examples or from simple instructions - something which current NLP systems still largely struggle to do. Here we show that scaling up language models greatly improves task-agnostic, few-shot performance, sometimes even reaching competitiveness with prior state-of-the-art fine-tuning approaches. Specifically, we train GPT-3, an autoregressive language model with 175 billion parameters, 10x more than any previous non-sparse language model, and test its performance in the few-shot setting. For all tasks, GPT-3 is applied without any gradient updates or fine-tuning, with tasks and few-shot demonstrations specified purely via text interaction with the model. GPT-3 achieves strong performance on many NLP datasets, including translation, question-answering, and cloze tasks, as well as several tasks that require on-the-fly reasoning or domain adaptation, such as unscrambling words, using a novel word in a sentence, or performing 3-digit arithmetic. At the same time, we also identify some datasets where GPT-3’s few-shot learning still struggles, as well as some datasets where GPT-3 faces methodological issues related to training on large web corpora. Finally, we find that GPT-3 can generate samples of news articles which human evaluators have difficulty distinguishing from articles written by humans. We discuss broader societal impacts of this finding and of GPT-3 in general. (@gpt3)
+
+Jose Camacho-collados, Kiamehr Rezaee, Talayeh Riahi, Asahi Ushio, Daniel Loureiro, Dimosthenis Antypas, Joanne Boisson, Luis Espinosa Anke, Fangyu Liu, and Eugenio Martinez Camara weetNLP: Cutting-edge natural language processing for social media In *Proceedings of the 2022 Conference on Empirical Methods in Natural Language Processing: System Demonstrations*, pages 38–49, Abu Dhabi, UAE, December 2022. Association for Computational Linguistics. URL <https://aclanthology.org/2022.emnlp-demos.5>. **Abstract:** Jose Camacho-collados, Kiamehr Rezaee, Talayeh Riahi, Asahi Ushio, Daniel Loureiro, Dimosthenis Antypas, Joanne Boisson, Luis Espinosa Anke, Fangyu Liu, Eugenio Martínez Cámara. Proceedings of the 2022 Conference on Empirical Methods in Natural Language Processing: System Demonstrations. 2022. (@sentiment-classifier)
+
+Charlie Chen, Sebastian Borgeaud, Geoffrey Irving, Jean-Baptiste Lespiau, Laurent Sifre, and John Jumper Accelerating large language model decoding with speculative sampling *CoRR*, abs/2302.01318, 2023. . URL <https://doi.org/10.48550/arXiv.2302.01318>. **Abstract:** We present speculative sampling, an algorithm for accelerating transformer decoding by enabling the generation of multiple tokens from each transformer call. Our algorithm relies on the observation that the latency of parallel scoring of short continuations, generated by a faster but less powerful draft model, is comparable to that of sampling a single token from the larger target model. This is combined with a novel modified rejection sampling scheme which preserves the distribution of the target model within hardware numerics. We benchmark speculative sampling with Chinchilla, a 70 billion parameter language model, achieving a 2-2.5x decoding speedup in a distributed setup, without compromising the sample quality or making modifications to the model itself. (@speculative)
+
+Howard Chen, Huihan Li, Danqi Chen, and Karthik Narasimhan Controllable text generation with language constraints *CoRR*, abs/2212.10466, 2022. . URL <https://doi.org/10.48550/arXiv.2212.10466>. **Abstract:** We consider the task of text generation in language models with constraints specified in natural language. To this end, we first create a challenging benchmark Cognac that provides as input to the model a topic with example text, along with a constraint on text to be avoided. Unlike prior work, our benchmark contains knowledge-intensive constraints sourced from databases like Wordnet and Wikidata, which allows for straightforward evaluation while striking a balance between broad attribute-level and narrow lexical-level controls. We find that even state-of-the-art language models like GPT-3 fail often on this task, and propose a solution to leverage a language model’s own internal knowledge to guide generation. Our method, called CognacGen, first queries the language model to generate guidance terms for a specified topic or constraint, and uses the guidance to modify the model’s token generation probabilities. We propose three forms of guidance (binary verifier, top-k tokens, textual example), and employ prefix-tuning approaches to distill the guidance to tackle diverse natural language constraints. Through extensive empirical evaluations, we demonstrate that CognacGen can successfully generalize to unseen instructions and outperform competitive baselines in generating constraint conforming text. (@cognac)
+
+Aakanksha Chowdhery, Sharan Narang, Jacob Devlin, Maarten Bosma, Gaurav Mishra, Adam Roberts, Paul Barham, Hyung Won Chung, Charles Sutton, Sebastian Gehrmann, Parker Schuh, Kensen Shi, Sasha Tsvyashchenko, Joshua Maynez, Abhishek Rao, Parker Barnes, Yi Tay, Noam Shazeer, Vinodkumar Prabhakaran, Emily Reif, Nan Du, Ben Hutchinson, Reiner Pope, James Bradbury, Jacob Austin, Michael Isard, Guy Gur-Ari, Pengcheng Yin, Toju Duke, Anselm Levskaya, Sanjay Ghemawat, Sunipa Dev, Henryk Michalewski, Xavier Garcia, Vedant Misra, Kevin Robinson, Liam Fedus, Denny Zhou, Daphne Ippolito, David Luan, Hyeontaek Lim, Barret Zoph, Alexander Spiridonov, Ryan Sepassi, David Dohan, Shivani Agrawal, Mark Omernick, Andrew M. Dai, Thanumalayan Sankaranarayana Pillai, Marie Pellat, Aitor Lewkowycz, Erica Moreira, Rewon Child, Oleksandr Polozov, Katherine Lee, Zongwei Zhou, Xuezhi Wang, Brennan Saeta, Mark Diaz, Orhan Firat, Michele Catasta, Jason Wei, Kathy Meier-Hellstern, Douglas Eck, Jeff Dean, Slav Petrov, and Noah Fiedel Palm: Scaling language modeling with pathways *CoRR*, abs/2204.02311, 2022. . URL <https://doi.org/10.48550/arXiv.2204.02311>. **Abstract:** Large language models have been shown to achieve remarkable performance across a variety of natural language tasks using few-shot learning, which drastically reduces the number of task-specific training examples needed to adapt the model to a particular application. To further our understanding of the impact of scale on few-shot learning, we trained a 540-billion parameter, densely activated, Transformer language model, which we call Pathways Language Model PaLM. We trained PaLM on 6144 TPU v4 chips using Pathways, a new ML system which enables highly efficient training across multiple TPU Pods. We demonstrate continued benefits of scaling by achieving state-of-the-art few-shot learning results on hundreds of language understanding and generation benchmarks. On a number of these tasks, PaLM 540B achieves breakthrough performance, outperforming the finetuned state-of-the-art on a suite of multi-step reasoning tasks, and outperforming average human performance on the recently released BIG-bench benchmark. A significant number of BIG-bench tasks showed discontinuous improvements from model scale, meaning that performance steeply increased as we scaled to our largest model. PaLM also has strong capabilities in multilingual tasks and source code generation, which we demonstrate on a wide array of benchmarks. We additionally provide a comprehensive analysis on bias and toxicity, and study the extent of training data memorization with respect to model scale. Finally, we discuss the ethical considerations related to large language models and discuss potential mitigation strategies. (@palm)
+
+cjadams, Jeffrey Sorensen, Julia Elliott, Lucas Dixon, Mark McDonald, nithum, and Will Cukierski Toxic comment classification challenge 2017. URL <https://kaggle.com/competitions/jigsaw-toxic-comment-classification-challenge>. **Abstract:** Toxic comment classification has become an active research field with many recently proposed approaches. However, while these approaches address some of the task’s challenges others still remain unsolved and directions for further research are needed. To this end, we compare different deep learning and shallow approaches on a new, large comment dataset and propose an ensemble that outperforms all individual models. Further, we validate our findings on a second dataset. The results of the ensemble enable us to perform an extensive error analysis, which reveals open challenges for state-of-the-art methods and directions towards pending future research. These challenges include missing paradigmatic context and inconsistent dataset labels. (@jigsaw)
+
+Sumanth Dathathri, Andrea Madotto, Janice Lan, Jane Hung, Eric Frank, Piero Molino, Jason Yosinski, and Rosanne Liu Plug and play language models: A simple approach to controlled text generation In *8th International Conference on Learning Representations, ICLR 2020, Addis Ababa, Ethiopia, April 26-30, 2020*. OpenReview.net, 2020. URL <https://openreview.net/forum?id=H1edEyBKDS>. **Abstract:** Large transformer-based language models (LMs) trained on huge text corpora have shown unparalleled generation capabilities. However, controlling attributes of the generated language (e.g. switching topic or sentiment) is difficult without modifying the model architecture or fine-tuning on attribute-specific data and entailing the significant cost of retraining. We propose a simple alternative: the Plug and Play Language Model (PPLM) for controllable language generation, which combines a pretrained LM with one or more simple attribute classifiers that guide text generation without any further training of the LM. In the canonical scenario we present, the attribute models are simple classifiers consisting of a user-specified bag of words or a single learned layer with 100,000 times fewer parameters than the LM. Sampling entails a forward and backward pass in which gradients from the attribute model push the LM’s hidden activations and thus guide the generation. Model samples demonstrate control over a range of topics and sentiment styles, and extensive automated and human annotated evaluations show attribute alignment and fluency. PPLMs are flexible in that any combination of differentiable attribute models may be used to steer text generation, which will allow for diverse and creative applications beyond the examples given in this paper. (@pplm)
+
+Skyler Hallinan, Alisa Liu, Yejin Choi, and Maarten Sap Detoxifying text with marco: Controllable revision with experts and anti-experts In Anna Rogers, Jordan L. Boyd-Graber, and Naoaki Okazaki, editors, *Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (Volume 2: Short Papers), ACL 2023, Toronto, Canada, July 9-14, 2023*, pages 228–242. Association for Computational Linguistics, 2023. . URL <https://doi.org/10.18653/v1/2023.acl-short.21>. **Abstract:** Text detoxification has the potential to mitigate the harms of toxicity by rephrasing text to remove offensive meaning, but subtle toxicity remains challenging to tackle. We introduce MaRCo, a detoxification algorithm that combines controllable generation and text rewriting methods using a Product of Experts with autoencoder language models (LMs). MaRCo uses likelihoods under a non-toxic LM (expert) and a toxic LM (anti-expert) to find candidate words to mask and potentially replace. We evaluate our method on several subtle toxicity and microaggressions datasets, and show that it not only outperforms baselines on automatic metrics, but MaRCo’s rewrites are preferred 2.1 times more in human evaluation. Its applicability to instances of subtle toxicity is especially promising, demonstrating a path forward for addressing increasingly elusive online hate. (@marco)
+
+Joel Jang, Seonghyeon Ye, and Minjoon Seo Can large language models truly understand prompts? A case study with negated prompts In Alon Albalak, Chunting Zhou, Colin Raffel, Deepak Ramachandran, Sebastian Ruder, and Xuezhe Ma, editors, *Transfer Learning for Natural Language Processing Workshop, 03 December 2022, New Orleans, Louisiana, USA*, volume 203 of *Proceedings of Machine Learning Research*, pages 52–62. PMLR, 2022. URL <https://proceedings.mlr.press/v203/jang23a.html>. **Abstract:** Previous work has shown that there exists a scaling law between the size of Language Models (LMs) and their zero-shot performance on different downstream NLP tasks. In this work, we show that this phenomenon does not hold when evaluating large LMs on tasks with negated prompts, but instead shows an inverse scaling law. We evaluate 9 different tasks with negated prompts on (1) pretrained LMs (OPT & GPT-3) of varying sizes (125M - 175B), (2) LMs further pretrained to generalize to novel prompts (InstructGPT), (3) LMs provided with few-shot examples, and (4) LMs fine-tuned specifically on negated prompts; all LM types perform worse on negated prompts as they scale and show a huge performance gap between the human performance when comparing the average score on both original and negated prompts. By highlighting a critical limitation of existing LMs and methods, we urge the community to develop new approaches of developing LMs that actually follow the given instructions. We provide the code and the datasets to explore negated prompts at https://github.com/joeljang/negated-prompts-for-llms (@negative-prompts)
+
+Minbeom Kim, Hwanhee Lee, Kang Min Yoo, Joonsuk Park, Hwaran Lee, and Kyomin Jung Critic-guided decoding for controlled text generation In Anna Rogers, Jordan L. Boyd-Graber, and Naoaki Okazaki, editors, *Findings of the Association for Computational Linguistics: ACL 2023, Toronto, Canada, July 9-14, 2023*, pages 4598–4612. Association for Computational Linguistics, 2023. . URL <https://doi.org/10.18653/v1/2023.findings-acl.281>. **Abstract:** Steering language generation towards objectives or away from undesired content has been a long-standing goal in utilizing language models (LM). Recent work has demonstrated reinforcement learning and weighted decoding as effective approaches to achieve a higher level of language control and quality with pros and cons. In this work, we propose a novel critic decoding method for controlled language generation (CriticControl) that combines the strengths of reinforcement learning and weighted decoding. Specifically, we adopt the actor-critic framework and train an LM-steering critic from reward models. Similar to weighted decoding, our method freezes the language model and manipulates the output token distribution using a critic to improve training efficiency and stability. Evaluation of our method on three controlled generation tasks, topic control, sentiment control, and detoxification, shows that our approach generates more coherent and well-controlled texts than previous methods. In addition, CriticControl demonstrates superior generalization ability in zero-shot settings. Human evaluation studies also corroborate our findings. (@critic-control)
+
+Sachin Kumar, Eric Malmi, Aliaksei Severyn, and Yulia Tsvetkov Controlled text generation as continuous optimization with multiple constraints In Marc’Aurelio Ranzato, Alina Beygelzimer, Yann N. Dauphin, Percy Liang, and Jennifer Wortman Vaughan, editors, *Advances in Neural Information Processing Systems 34: Annual Conference on Neural Information Processing Systems 2021, NeurIPS 2021, December 6-14, 2021, virtual*, pages 14542–14554, 2021. URL <https://proceedings.neurips.cc/paper/2021/hash/79ec2a4246feb2126ecf43c4a4418002-Abstract.html>. **Abstract:** As large-scale language model pretraining pushes the state-of-the-art in text generation, recent work has turned to controlling attributes of the text such models generate. While modifying the pretrained models via fine-tuning remains the popular approach, it incurs a significant computational cost and can be infeasible due to lack of appropriate data. As an alternative, we propose MuCoCO – a flexible and modular algorithm for controllable inference from pretrained models. We formulate the decoding process as an optimization problem which allows for multiple attributes we aim to control to be easily incorporated as differentiable constraints to the optimization. By relaxing this discrete optimization to a continuous one, we make use of Lagrangian multipliers and gradient-descent based techniques to generate the desired text. We evaluate our approach on controllable machine translation and style transfer with multiple sentence-level attributes and observe significant improvements over baselines. (@mucoco)
+
+Sachin Kumar, Biswajit Paria, and Yulia Tsvetkov Gradient-based constrained sampling from language models In Yoav Goldberg, Zornitsa Kozareva, and Yue Zhang, editors, *Proceedings of the 2022 Conference on Empirical Methods in Natural Language Processing, EMNLP 2022, Abu Dhabi, United Arab Emirates, December 7-11, 2022*, pages 2251–2277. Association for Computational Linguistics, 2022. . URL <https://doi.org/10.18653/v1/2022.emnlp-main.144>. **Abstract:** Large pretrained language models are successful at generating fluent text but are notoriously hard to controllably sample from. In this work, we study constrained sampling from such language models, i.e., generating text that satisfies user-defined constraints, while maintaining fluency and model’s performance in a downstream task. We propose MuCoLa—a sampling procedure that combines the log-likelihood of the language model with arbitrary (differentiable) constraints in a single energy function, and then generates samples in a non-autoregressive manner. Specifically, it initializes the entire output sequence with noise and follows a Markov chain defined by Langevin Dynamics using the gradients of this energy. We evaluate MuCoLa on text generation with soft and hard constraints as well as their combinations, obtaining significant improvements over competitive baselines for toxicity avoidance, sentiment control, and keyword-guided generation. (@langevin)
+
+Alisa Liu, Maarten Sap, Ximing Lu, Swabha Swayamdipta, Chandra Bhagavatula, Noah A. Smith, and Yejin Choi Dexperts: Decoding-time controlled text generation with experts and anti-experts In Chengqing Zong, Fei Xia, Wenjie Li, and Roberto Navigli, editors, *Proceedings of the 59th Annual Meeting of the Association for Computational Linguistics and the 11th International Joint Conference on Natural Language Processing, ACL/IJCNLP 2021, (Volume 1: Long Papers), Virtual Event, August 1-6, 2021*, pages 6691–6706. Association for Computational Linguistics, 2021. . URL <https://doi.org/10.18653/v1/2021.acl-long.522>. **Abstract:** Alisa Liu, Maarten Sap, Ximing Lu, Swabha Swayamdipta, Chandra Bhagavatula, Noah A. Smith, Yejin Choi. Proceedings of the 59th Annual Meeting of the Association for Computational Linguistics and the 11th International Joint Conference on Natural Language Processing (Volume 1: Long Papers). 2021. (@dexperts)
+
+Yinhan Liu, Myle Ott, Naman Goyal, Jingfei Du, Mandar Joshi, Danqi Chen, Omer Levy, Mike Lewis, Luke Zettlemoyer, and Veselin Stoyanov Roberta: A robustly optimized BERT pretraining approach *CoRR*, abs/1907.11692, 2019. URL <http://arxiv.org/abs/1907.11692>. **Abstract:** Language model pretraining has led to significant performance gains but careful comparison between different approaches is challenging. Training is computationally expensive, often done on private datasets of different sizes, and, as we will show, hyperparameter choices have significant impact on the final results. We present a replication study of BERT pretraining (Devlin et al., 2019) that carefully measures the impact of many key hyperparameters and training data size. We find that BERT was significantly undertrained, and can match or exceed the performance of every model published after it. Our best model achieves state-of-the-art results on GLUE, RACE and SQuAD. These results highlight the importance of previously overlooked design choices, and raise questions about the source of recently reported improvements. We release our models and code. (@roberta)
+
+Andrew L Maas, Raymond E Daly, Peter T Pham, Dan Huang, Andrew Y Ng, and Christopher Potts Learning word vectors for sentiment analysis In *Proceedings of the 49th Annual Meeting of the Association for Computational Linguistics: Human Language Technologies*. Association for Computational Linguistics, 2011. **Abstract:** Unsupervised vector-based approaches to semantics can model rich lexical meanings, but they largely fail to capture sentiment information that is central to many word meanings and important for a wide range of NLP tasks. We present a model that uses a mix of unsupervised and supervised techniques to learn word vectors capturing semantic term–document information as well as rich sentiment content. The proposed model can leverage both continuous and multi-dimensional sentiment information as well as non-sentiment annotations. We instantiate the model to utilize the document-level sentiment polarity annotations present in many online documents (e.g. star ratings). We evaluate the model using small, widely used sentiment and subjectivity corpora and find it out-performs several previously introduced methods for sentiment classification. We also introduce a large dataset of movie reviews to serve as a more robust benchmark for work in this area. (@IMDBDataset)
+
+Tao Meng, Sidi Lu, Nanyun Peng, and Kai-Wei Chang Controllable text generation with neurally-decomposed oracle In *NeurIPS*, 2022. URL <http://papers.nips.cc/paper_files/paper/2022/hash/b40d5797756800c97f3d525c2e4c8357-Abstract-Conference.html>. **Abstract:** We propose a general and efficient framework to control auto-regressive generation models with NeurAlly-Decomposed Oracle (NADO). Given a pre-trained base language model and a sequence-level boolean oracle function, we propose to decompose the oracle function into token-level guidance to steer the base model in text generation. Specifically, the token-level guidance is approximated by a neural model trained with examples sampled from the base model, demanding no additional auxiliary labeled data. Based on posterior regularization, we present the closed-form optimal solution to incorporate the token-level guidance into the base model for controllable generation. We further provide a theoretical analysis of how the approximation quality of NADO affects the controllable generation results. Experiments conducted on two applications: (1) text generation with lexical constraints and (2) machine translation with formality control demonstrate that our framework efficiently guides the base model towards the given oracle while maintaining high generation quality. (@nado)
+
+Xupeng Miao, Gabriele Oliaro, Zhihao Zhang, Xinhao Cheng, Zeyu Wang, Rae Ying Yee Wong, Zhuoming Chen, Daiyaan Arfeen, Reyna Abhyankar, and Zhihao Jia Specinfer: Accelerating generative LLM serving with speculative inference and token tree verification *CoRR*, abs/2305.09781, 2023. . URL <https://doi.org/10.48550/arXiv.2305.09781>. **Abstract:** This paper introduces SpecInfer, a system that accelerates generative large language model (LLM) serving with tree-based speculative inference and verification. The key idea behind SpecInfer is leveraging small speculative models to predict the LLM’s outputs; the predictions are organized as a token tree, whose nodes each represent a candidate token sequence. The correctness of all candidate token sequences represented by a token tree is verified against the LLM in parallel using a novel tree-based parallel decoding mechanism. SpecInfer uses an LLM as a token tree verifier instead of an incremental decoder, which significantly reduces the end-to-end latency and computational requirement for serving generative LLMs while provably preserving model quality. Our evaluation shows that SpecInfer outperforms existing LLM serving systems by 1.5-2.8x for distributed LLM inference and by 2.6-3.5x for offloading-based LLM inference, while preserving the same generative performance. SpecInfer is publicly available at https://github.com/flexflow/FlexFlow/ (@specinfer)
+
+OpenAI technical report *CoRR*, abs/2303.08774, 2023. . URL <https://doi.org/10.48550/arXiv.2303.08774>. **Abstract:** We report the development of GPT-4, a large-scale, multimodal model which can accept image and text inputs and produce text outputs. While less capable than humans in many real-world scenarios, GPT-4 exhibits human-level performance on various professional and academic benchmarks, including passing a simulated bar exam with a score around the top 10% of test takers. GPT-4 is a Transformer-based model pre-trained to predict the next token in a document. The post-training alignment process results in improved performance on measures of factuality and adherence to desired behavior. A core component of this project was developing infrastructure and optimization methods that behave predictably across a wide range of scales. This allowed us to accurately predict some aspects of GPT-4’s performance based on models trained with no more than 1/1,000th the compute of GPT-4. (@gpt4)
+
+Long Ouyang, Jeffrey Wu, Xu Jiang, Diogo Almeida, Carroll L. Wainwright, Pamela Mishkin, Chong Zhang, Sandhini Agarwal, Katarina Slama, Alex Ray, John Schulman, Jacob Hilton, Fraser Kelton, Luke Miller, Maddie Simens, Amanda Askell, Peter Welinder, Paul F. Christiano, Jan Leike, and Ryan Lowe Training language models to follow instructions with human feedback In *NeurIPS*, 2022. URL <http://papers.nips.cc/paper_files/paper/2022/hash/b1efde53be364a73914f58805a001731-Abstract-Conference.html>. **Abstract:** Making language models bigger does not inherently make them better at following a user’s intent. For example, large language models can generate outputs that are untruthful, toxic, or simply not helpful to the user. In other words, these models are not aligned with their users. In this paper, we show an avenue for aligning language models with user intent on a wide range of tasks by fine-tuning with human feedback. Starting with a set of labeler-written prompts and prompts submitted through the OpenAI API, we collect a dataset of labeler demonstrations of the desired model behavior, which we use to fine-tune GPT-3 using supervised learning. We then collect a dataset of rankings of model outputs, which we use to further fine-tune this supervised model using reinforcement learning from human feedback. We call the resulting models InstructGPT. In human evaluations on our prompt distribution, outputs from the 1.3B parameter InstructGPT model are preferred to outputs from the 175B GPT-3, despite having 100x fewer parameters. Moreover, InstructGPT models show improvements in truthfulness and reductions in toxic output generation while having minimal performance regressions on public NLP datasets. Even though InstructGPT still makes simple mistakes, our results show that fine-tuning with human feedback is a promising direction for aligning language models with human intent. (@instructgpt)
+
+Antonis Papasavva, Savvas Zannettou, Emiliano De Cristofaro, Gianluca Stringhini, and Jeremy Blackburn Raiders of the lost kek: 3.5 years of augmented 4chan posts from the politically incorrect board In Munmun De Choudhury, Rumi Chunara, Aron Culotta, and Brooke Foucault Welles, editors, *Proceedings of the Fourteenth International AAAI Conference on Web and Social Media, ICWSM 2020, Held Virtually, Original Venue: Atlanta, Georgia, USA, June 8-11, 2020*, pages 885–894. AAAI Press, 2020. URL <https://ojs.aaai.org/index.php/ICWSM/article/view/7354>. **Abstract:** This paper presents a dataset with over 3.3M threads and 134.5M posts from the Politically Incorrect board (/pol/) of the imageboard forum 4chan, posted over a period of almost 3.5 years (June 2016-November 2019). To the best of our knowledge, this represents the largest publicly available 4chan dataset, providing the community with an archive of posts that have been permanently deleted from 4chan and are otherwise inaccessible. We augment the data with a set of additional labels, including toxicity scores and the named entities mentioned in each post. We also present a statistical analysis of the dataset, providing an overview of what researchers interested in using it can expect, as well as a simple content analysis, shedding light on the most prominent discussion topics, the most popular entities mentioned, and the toxicity level of each post. Overall, we are confident that our work will motivate and assist researchers in studying and understanding 4chan, as well as its role on the greater Web. For instance, we hope this dataset may be used for cross-platform studies of social media, as well as being useful for other types of research like natural language processing. Finally, our dataset can assist qualitative work focusing on in-depth case studies of specific narratives, events, or social theories. (@pol-dataset)
+
+Jonathan Pei, Kevin Yang, and Dan Klein prefix-adaptive decoding for controlled text generation In Anna Rogers, Jordan L. Boyd-Graber, and Naoaki Okazaki, editors, *Findings of the Association for Computational Linguistics: ACL 2023, Toronto, Canada, July 9-14, 2023*, pages 10018–10037. Association for Computational Linguistics, 2023. . URL <https://doi.org/10.18653/v1/2023.findings-acl.636>. **Abstract:** We propose Prefix-Adaptive Decoding (PREADD), a flexible method for controlled text generation. Unlike existing methods that use auxiliary expert models to control for attributes, PREADD does not require an external model, instead relying on linearly combining output logits from multiple prompts. Specifically, PREADD contrasts the output logits generated using a raw prompt against those generated using a prefix-prepended prompt, enabling both positive and negative control with respect to any attribute encapsulated by the prefix. We evaluate PREADD on three tasks – toxic output mitigation, gender bias reduction, and sentiment control – and find that PREADD outperforms not only prompting baselines, but also an auxiliary-expert control method, by 12% or more in relative gain on our main metrics for each task. (@preadd)
+
+Alec Radford, Jeff Wu, Rewon Child, David Luan, Dario Amodei, and Ilya Sutskever Language models are unsupervised multitask learners . **Abstract:** While large language models (LLMs) have revolutionized natural language processing with their task-agnostic capabilities, visual generation tasks such as image translation, style transfer, and character customization still rely heavily on supervised, task-specific datasets. In this work, we introduce Group Diffusion Transformers (GDTs), a novel framework that unifies diverse visual generation tasks by redefining them as a group generation problem. In this approach, a set of related images is generated simultaneously, optionally conditioned on a subset of the group. GDTs build upon diffusion transformers with minimal architectural modifications by concatenating self-attention tokens across images. This allows the model to implicitly capture cross-image relationships (e.g., identities, styles, layouts, surroundings, and color schemes) through caption-based correlations. Our design enables scalable, unsupervised, and task-agnostic pretraining using extensive collections of image groups sourced from multimodal internet articles, image galleries, and video frames. We evaluate GDTs on a comprehensive benchmark featuring over 200 instructions across 30 distinct visual generation tasks, including picture book creation, font design, style transfer, sketching, colorization, drawing sequence generation, and character customization. Our models achieve competitive zero-shot performance without any additional fine-tuning or gradient updates. Furthermore, ablation studies confirm the effectiveness of key components such as data scaling, group size, and model design. These results demonstrate the potential of GDTs as scalable, general-purpose visual generation systems. (@gpt2)
+
+Baptiste Rozière, Jonas Gehring, Fabian Gloeckle, Sten Sootla, Itai Gat, Xiaoqing Ellen Tan, Yossi Adi, Jingyu Liu, Tal Remez, Jérémy Rapin, Artyom Kozhevnikov, Ivan Evtimov, Joanna Bitton, Manish Bhatt, Cristian Canton-Ferrer, Aaron Grattafiori, Wenhan Xiong, Alexandre Défossez, Jade Copet, Faisal Azhar, Hugo Touvron, Louis Martin, Nicolas Usunier, Thomas Scialom, and Gabriel Synnaeve Code llama: Open foundation models for code *CoRR*, abs/2308.12950, 2023. . URL <https://doi.org/10.48550/arXiv.2308.12950>. **Abstract:** We release Code Llama, a family of large language models for code based on Llama 2 providing state-of-the-art performance among open models, infilling capabilities, support for large input contexts, and zero-shot instruction following ability for programming tasks. We provide multiple flavors to cover a wide range of applications: foundation models (Code Llama), Python specializations (Code Llama - Python), and instruction-following models (Code Llama - Instruct) with 7B, 13B, 34B and 70B parameters each. All models are trained on sequences of 16k tokens and show improvements on inputs with up to 100k tokens. 7B, 13B and 70B Code Llama and Code Llama - Instruct variants support infilling based on surrounding content. Code Llama reaches state-of-the-art performance among open models on several code benchmarks, with scores of up to 67% and 65% on HumanEval and MBPP, respectively. Notably, Code Llama - Python 7B outperforms Llama 2 70B on HumanEval and MBPP, and all our models outperform every other publicly available model on MultiPL-E. We release Code Llama under a permissive license that allows for both research and commercial use. (@codellama)
+
+Punyajoy Saha, Kanishk Singh, Adarsh Kumar, Binny Mathew, and Animesh Mukherjee Countergedi: A controllable approach to generate polite, detoxified and emotional counterspeech In Luc De Raedt, editor, *Proceedings of the Thirty-First International Joint Conference on Artificial Intelligence, IJCAI 2022, Vienna, Austria, 23-29 July 2022*, pages 5157–5163. ijcai.org, 2022. . URL <https://doi.org/10.24963/ijcai.2022/716>. **Abstract:** Recently, many studies have tried to create generation models to assist counter speakers by providing counterspeech suggestions for combating the explosive proliferation of online hate. However, since these suggestions are from a vanilla generation model, they might not include the appropriate properties required to counter a particular hate speech instance. In this paper, we propose CounterGeDi - an ensemble of generative discriminators (GeDi) to guide the generation of a DialoGPT model toward more polite, detoxified, and emotionally laden counterspeech. We generate counterspeech using three datasets and observe significant improvement across different attribute scores. The politeness and detoxification scores increased by around 15% and 6% respectively, while the emotion in the counterspeech increased by at least 10% across all the datasets. We also experiment with triple-attribute control and observe significant improvement over single attribute results when combining complementing attributes, e.g., politeness, joyfulness and detoxification. In all these experiments, the relevancy of the generated text does not deteriorate due to the application of these controls. (@countergedi)
+
+Guillaume Sanchez, Honglu Fan, Alexander Spangher, Elad Levi, Pawan Sasanka Ammanamanchi, and Stella Biderman Stay on topic with classifier-free guidance *CoRR*, abs/2306.17806, 2023. . URL <https://doi.org/10.48550/arXiv.2306.17806>. **Abstract:** Classifier-Free Guidance (CFG) has recently emerged in text-to-image generation as a lightweight technique to encourage prompt-adherence in generations. In this work, we demonstrate that CFG can be used broadly as an inference-time technique in pure language modeling. We show that CFG (1) improves the performance of Pythia, GPT-2 and LLaMA-family models across an array of tasks: Q\\}&A, reasoning, code generation, and machine translation, achieving SOTA on LAMBADA with LLaMA-7B over PaLM-540B; (2) brings improvements equivalent to a model with twice the parameter-count; (3) can stack alongside other inference-time methods like Chain-of-Thought and Self-Consistency, yielding further improvements in difficult tasks; (4) can be used to increase the faithfulness and coherence of assistants in challenging form-driven and content-driven prompts: in a human evaluation we show a 75\\}% preference for GPT4All using CFG over baseline. (@cfg)
+
+Emanuele Sansone and Robin Manhaeve generative and discriminative training for self-supervised learning *CoRR*, abs/2212.13425, 2022. . URL <https://doi.org/10.48550/arXiv.2212.13425>. **Abstract:** Self-supervised learning is a popular and powerful method for utilizing large amounts of unlabeled data, for which a wide variety of training objectives have been proposed in the literature. In this study, we perform a Bayesian analysis of state-of-the-art self-supervised learning objectives and propose a unified formulation based on likelihood learning. Our analysis suggests a simple method for integrating self-supervised learning with generative models, allowing for the joint training of these two seemingly distinct approaches. We refer to this combined framework as GEDI, which stands for GEnerative and DIscriminative training. Additionally, we demonstrate an instantiation of the GEDI framework by integrating an energy-based model with a cluster-based self-supervised learning model. Through experiments on synthetic and real-world data, including SVHN, CIFAR10, and CIFAR100, we show that GEDI outperforms existing self-supervised learning strategies in terms of clustering performance by a wide margin. We also demonstrate that GEDI can be integrated into a neural-symbolic framework to address tasks in the small data regime, where it can use logical constraints to further improve clustering and classification performance. (@gedi)
+
+Timo Schick, Sahana Udupa, and Hinrich Schütze Self-diagnosis and self-debiasing: A proposal for reducing corpus-based bias in NLP *Trans. Assoc. Comput. Linguistics*, 9: 1408–1424, 2021. . URL <https://doi.org/10.1162/tacl_a_00434>. **Abstract:** Abstract ⚠ This paper contains prompts and model outputs that are offensive in nature. When trained on large, unfiltered crawls from the Internet, language models pick up and reproduce all kinds of undesirable biases that can be found in the data: They often generate racist, sexist, violent, or otherwise toxic language. As large models require millions of training examples to achieve good performance, it is difficult to completely prevent them from being exposed to such content. In this paper, we first demonstrate a surprising finding: Pretrained language models recognize, to a considerable degree, their undesirable biases and the toxicity of the content they produce. We refer to this capability as self-diagnosis. Based on this finding, we then propose a decoding algorithm that, given only a textual description of the undesired behavior, reduces the probability of a language model producing problematic text. We refer to this approach as self-debiasing. Self-debiasing does not rely on manually curated word lists, nor does it require any training data or changes to the model’s parameters. While we by no means eliminate the issue of language models generating biased text, we believe our approach to be an important step in this direction.1 (@self-debias)
+
+Askhat Sitdikov, Nikita Balagansky, Daniil Gavrilov, and Alexander Markov Classifiers are better experts for controllable text generation *CoRR*, abs/2205.07276, 2022. . URL <https://doi.org/10.48550/arXiv.2205.07276>. **Abstract:** This paper proposes a simple method for controllable text generation based on weighting logits with a free-form classifier, namely CAIF sampling. Using an arbitrary text classifier, we adjust a small part of a language model’s logits and guide text generation towards or away from classifier prediction. We experimented with toxicity avoidance and sentiment control tasks and showed that the proposed method significantly outperforms recent PPLM, GeDi, and DExperts on PPL and task accuracy metrics based on the external classifier of generated texts. In addition, compared to other approaches, it is easier to implement and tune and has significantly fewer restrictions and requirements. (@fudge-2)
+
+Irene Solaiman, Miles Brundage, Jack Clark, Amanda Askell, Ariel Herbert-Voss, Jeff Wu, Alec Radford, Gretchen Krueger, Jong Wook Kim, Sarah Kreps, et al Release strategies and the social impacts of language models *arXiv preprint arXiv:1908.09203*, 2019. **Abstract:** Large language models have a range of beneficial uses: they can assist in prose, poetry, and programming; analyze dataset biases; and more. However, their flexibility and generative capabilities also raise misuse concerns. This report discusses OpenAI’s work related to the release of its GPT-2 language model. It discusses staged release, which allows time between model releases to conduct risk and benefit analyses as model sizes increased. It also discusses ongoing partnership-based research and provides recommendations for better coordination and responsible publication in AI. (@openai-detector)
+
+Benjamin Spector and Chris Re Accelerating LLM inference with staged speculative decoding *CoRR*, abs/2308.04623, 2023. . URL <https://doi.org/10.48550/arXiv.2308.04623>. **Abstract:** Recent advances with large language models (LLM) illustrate their diverse capabilities. We propose a novel algorithm, staged speculative decoding, to accelerate LLM inference in small-batch, on-device scenarios. We address the low arithmetic intensity of small-batch inference by improving upon previous work in speculative decoding. First, we restructure the speculative batch as a tree, which reduces generation costs and increases the expected tokens per batch. Second, we add a second stage of speculative decoding. Taken together, we reduce single-batch decoding latency by 3.16x with a 762M parameter GPT-2-L model while perfectly preserving output quality. (@staged-speculative)
+
+Rohan Taori, Ishaan Gulrajani, Tianyi Zhang, Yann Dubois, Xuechen Li, Carlos Guestrin, Percy Liang, and Tatsunori B. Hashimoto Stanford alpaca: An instruction-following llama model <https://github.com/tatsu-lab/stanford_alpaca>, 2023. **Abstract:** Automatic fact-checking plays a crucial role in combating the spread of misinformation. Large Language Models (LLMs) and Instruction-Following variants, such as InstructGPT and Alpaca, have shown remarkable performance in various natural language processing tasks. However, their knowledge may not always be up-to-date or sufficient, potentially leading to inaccuracies in fact-checking. To address this limitation, we propose combining the power of instruction-following language models with external evidence retrieval to enhance fact-checking performance. Our approach involves leveraging search engines to retrieve relevant evidence for a given input claim. This external evidence serves as valuable supplementary information to augment the knowledge of the pretrained language model. Then, we instruct-tune an open-sourced language model, called LLaMA, using this evidence, enabling it to predict the veracity of the input claim more accurately. To evaluate our method, we conducted experiments on two widely used fact-checking datasets: RAWFC and LIAR. The results demonstrate that our approach achieves state-of-the-art performance in fact-checking tasks. By integrating external evidence, we bridge the gap between the model’s knowledge and the most up-to-date and sufficient context available, leading to improved fact-checking outcomes. Our findings have implications for combating misinformation and promoting the dissemination of accurate information on online platforms. Our released materials are accessible at: https://thcheung.github.io/factllama. (@alpaca)
+
+MosaicML NLP Team Introducing mpt-7b: A new standard for open-source, commercially usable llms 2023. URL <a href="www.mosaicml.com/blog/mpt-7b" class="uri">www.mosaicml.com/blog/mpt-7b</a>. Accessed: 2023-05-05. **Abstract:** As the capabilities of Large Language Models (LLMs) in healthcare and medicine continue to advance, there is a growing need for competitive open-source models that can safeguard public interest. With the increasing availability of highly competitive open base models, the impact of continued pre-training is increasingly uncertain. In this work, we explore the role of instruct tuning, model merging, alignment, red teaming and advanced inference schemes, as means to improve current open models. To that end, we introduce the Aloe family, a set of open medical LLMs highly competitive within its scale range. Aloe models are trained on the current best base models (Mistral, LLaMA 3), using a new custom dataset which combines public data sources improved with synthetic Chain of Thought (CoT). Aloe models undergo an alignment phase, becoming one of the first few policy-aligned open healthcare LLM using Direct Preference Optimization, setting a new standard for ethical performance in healthcare LLMs. Model evaluation expands to include various bias and toxicity datasets, a dedicated red teaming effort, and a much-needed risk assessment for healthcare LLMs. Finally, to explore the limits of current LLMs in inference, we study several advanced prompt engineering strategies to boost performance across benchmarks, yielding state-of-the-art results for open healthcare 7B LLMs, unprecedented at this scale. (@mpt)
+
+Hugo Touvron, Louis Martin, Kevin Stone, Peter Albert, Amjad Almahairi, Yasmine Babaei, Nikolay Bashlykov, Soumya Batra, Prajjwal Bhargava, Shruti Bhosale, Dan Bikel, Lukas Blecher, Cristian Canton-Ferrer, Moya Chen, Guillem Cucurull, David Esiobu, Jude Fernandes, Jeremy Fu, Wenyin Fu, Brian Fuller, Cynthia Gao, Vedanuj Goswami, Naman Goyal, Anthony Hartshorn, Saghar Hosseini, Rui Hou, Hakan Inan, Marcin Kardas, Viktor Kerkez, Madian Khabsa, Isabel Kloumann, Artem Korenev, Punit Singh Koura, Marie-Anne Lachaux, Thibaut Lavril, Jenya Lee, Diana Liskovich, Yinghai Lu, Yuning Mao, Xavier Martinet, Todor Mihaylov, Pushkar Mishra, Igor Molybog, Yixin Nie, Andrew Poulton, Jeremy Reizenstein, Rashi Rungta, Kalyan Saladi, Alan Schelten, Ruan Silva, Eric Michael Smith, Ranjan Subramanian, Xiaoqing Ellen Tan, Binh Tang, Ross Taylor, Adina Williams, Jian Xiang Kuan, Puxin Xu, Zheng Yan, Iliyan Zarov, Yuchen Zhang, Angela Fan, Melanie Kambadur, Sharan Narang, Aurélien Rodriguez, Robert Stojnic, Sergey Edunov, and Thomas Scialom Llama 2: Open foundation and fine-tuned chat models *CoRR*, abs/2307.09288, 2023. . URL <https://doi.org/10.48550/arXiv.2307.09288>. **Abstract:** In this work, we develop and release Llama 2, a collection of pretrained and fine-tuned large language models (LLMs) ranging in scale from 7 billion to 70 billion parameters. Our fine-tuned LLMs, called Llama 2-Chat, are optimized for dialogue use cases. Our models outperform open-source chat models on most benchmarks we tested, and based on our human evaluations for helpfulness and safety, may be a suitable substitute for closed-source models. We provide a detailed description of our approach to fine-tuning and safety improvements of Llama 2-Chat in order to enable the community to build on our work and contribute to the responsible development of LLMs. (@llama-2)
+
+Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez, Łukasz Kaiser, and Illia Polosukhin Attention is all you need *Advances in neural information processing systems*, 30, 2017. **Abstract:** The dominant sequence transduction models are based on complex recurrent or convolutional neural networks in an encoder-decoder configuration. The best performing models also connect the encoder and decoder through an attention mechanism. We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely. Experiments on two machine translation tasks show these models to be superior in quality while being more parallelizable and requiring significantly less time to train. Our model achieves 28.4 BLEU on the WMT 2014 English-to-German translation task, improving over the existing best results, including ensembles by over 2 BLEU. On the WMT 2014 English-to-French translation task, our model establishes a new single-model state-of-the-art BLEU score of 41.8 after training for 3.5 days on eight GPUs, a small fraction of the training costs of the best models from the literature. We show that the Transformer generalizes well to other tasks by applying it successfully to English constituency parsing both with large and limited training data. (@vaswani2017attention)
+
+Thomas Wolf, Lysandre Debut, Victor Sanh, Julien Chaumond, Clement Delangue, Anthony Moi, Pierric Cistac, Tim Rault, Rémi Louf, Morgan Funtowicz, Joe Davison, Sam Shleifer, Patrick von Platen, Clara Ma, Yacine Jernite, Julien Plu, Canwen Xu, Teven Le Scao, Sylvain Gugger, Mariama Drame, Quentin Lhoest, and Alexander M. Rush Transformers: State-of-the-art natural language processing In *Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing: System Demonstrations*, pages 38–45, Online, October 2020. Association for Computational Linguistics. URL <https://www.aclweb.org/anthology/2020.emnlp-demos.6>. **Abstract:** Thomas Wolf, Lysandre Debut, Victor Sanh, Julien Chaumond, Clement Delangue, Anthony Moi, Pierric Cistac, Tim Rault, Remi Louf, Morgan Funtowicz, Joe Davison, Sam Shleifer, Patrick von Platen, Clara Ma, Yacine Jernite, Julien Plu, Canwen Xu, Teven Le Scao, Sylvain Gugger, Mariama Drame, Quentin Lhoest, Alexander Rush. Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing: System Demonstrations. 2020. (@huggingface)
+
+Kevin Yang and Dan Klein controlled text generation with future discriminators In Kristina Toutanova, Anna Rumshisky, Luke Zettlemoyer, Dilek Hakkani-Tür, Iz Beltagy, Steven Bethard, Ryan Cotterell, Tanmoy Chakraborty, and Yichao Zhou, editors, *Proceedings of the 2021 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, NAACL-HLT 2021, Online, June 6-11, 2021*, pages 3511–3535. Association for Computational Linguistics, 2021. . URL <https://doi.org/10.18653/v1/2021.naacl-main.276>. **Abstract:** We propose Future Discriminators for Generation (FUDGE), a flexible and modular method for controlled text generation. Given a pre-existing model G for generating text from a distribution of interest, FUDGE enables conditioning on a desired attribute a (for example, formality) while requiring access only to G’s output logits. FUDGE learns an attribute predictor operating on a partial sequence, and uses this predictor’s outputs to adjust G’s original probabilities. We show that FUDGE models terms corresponding to a Bayesian decomposition of the conditional distribution of G given attribute a. Moreover, FUDGE can easily compose predictors for multiple desired attributes. We evaluate FUDGE on three tasks – couplet completion in poetry, topic control in language generation, and formality change in machine translation – and observe gains in all three tasks. (@fudge)
+
+Zonghan Yang, Xiaoyuan Yi, Peng Li, Yang Liu, and Xing Xie Unified detoxifying and debiasing in language generation via inference-time adaptive optimization In *The Eleventh International Conference on Learning Representations, ICLR 2023, Kigali, Rwanda, May 1-5, 2023*. OpenReview.net, 2023. URL <https://openreview.net/pdf?id=FvevdI0aA_h>. **Abstract:** Warning: this paper contains model outputs exhibiting offensiveness and biases. Recently pre-trained language models (PLMs) have prospered in various natural language generation (NLG) tasks due to their ability to generate fairly fluent text. Nevertheless, these models are observed to capture and reproduce harmful contents in training corpora, typically toxic language and social biases, raising severe moral issues. Prior works on ethical NLG tackle detoxifying and debiasing separately, which is problematic since we find debiased models still exhibit toxicity while detoxified ones even exacerbate social biases. To address such a challenge, we propose the first unified framework of detoxifying and debiasing called UDDIA, which jointly formalizes these two problems as rectifying the output space. We theoretically interpret our framework as learning a text distribution mixing weighted attributes. Besides, UDDIA conducts adaptive optimization of only a few parameters during decoding based on a parameter-efficient tuning schema without any training data. This leads to minimal generation quality loss and improved rectification performance with acceptable computational cost. Experimental results demonstrate that compared to several strong baselines, UDDIA achieves debiasing and detoxifying simultaneously and better balances efficiency and effectiveness, taking a further step towards practical ethical NLG. (@uddia)
+
+Zihao Zhao, Eric Wallace, Shi Feng, Dan Klein, and Sameer Singh Calibrate before use: Improving few-shot performance of language models In Marina Meila and Tong Zhang, editors, *Proceedings of the 38th International Conference on Machine Learning, ICML 2021, 18-24 July 2021, Virtual Event*, volume 139 of *Proceedings of Machine Learning Research*, pages 12697–12706. PMLR, 2021. URL <http://proceedings.mlr.press/v139/zhao21c.html>. **Abstract:** GPT-3 can perform numerous tasks when provided a natural language prompt that contains a few training examples. We show that this type of few-shot learning can be unstable: the choice of prompt format, training examples, and even the order of the training examples can cause accuracy to vary from near chance to near state-of-the-art. We demonstrate that this instability arises from the bias of language models towards predicting certain answers, e.g., those that are placed near the end of the prompt or are common in the pre-training data. To mitigate this, we first estimate the model’s bias towards each answer by asking for its prediction when given the training prompt and a content-free test input such as "N/A". We then fit calibration parameters that cause the prediction for this input to be uniform across answers. On a diverse set of tasks, this contextual calibration procedure substantially improves GPT-3 and GPT-2’s average accuracy (up to 30.0% absolute) and reduces variance across different choices of the prompt. (@calibratebeforeuse)
+
+</div>
+
+[^1]: $`[P]`$ is $`1`$ if $`P`$ is true and $`0`$ else. See <https://en.wikipedia.org/wiki/Iverson_bracket>.
+
+[^2]: <a href="perspectiveapi.com" class="uri">perspectiveapi.com</a>

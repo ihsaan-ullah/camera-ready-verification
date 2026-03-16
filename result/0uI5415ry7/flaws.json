@@ -1,0 +1,112 @@
+[
+    {
+        "flaw_id": 1,
+        "start_of_flaw": "The main message of this paper is",
+        "end_of_flaw": "training methods for transformers.",
+        "flaw_category": "2b",
+        "flaw_title": "Missing Theoretical Foundation",
+        "flaw_description": "The paper primarily presents empirical findings and proposes a simplified model as a testbed. However, it lacks a formal theoretical justification or deeper mathematical analysis for the observed phenomena in the linear transformer setting, which the authors themselves acknowledge as a direction for future work rather than a current contribution.",
+        "flaw_severity": "medium",
+        "flaw_confidence": 5,
+        "review_id": "HKu0Jpj3O5"
+    },
+    {
+        "flaw_id": 2,
+        "start_of_flaw": "Specifically, the optimization problem to be",
+        "end_of_flaw": "of in-context learning .",
+        "flaw_category": "1b",
+        "flaw_title": "Limited Scope of Empirical Evaluation to Linear Regression",
+        "flaw_description": "The empirical evaluation is primarily focused on linear regression tasks, which, while suitable for linear transformers, limits the generalizability of the conclusions to the broader context of 'transformer optimization', especially for practical language modeling tasks. Although additional non-linear experiments were added, the authors acknowledged this limitation.",
+        "flaw_severity": "medium",
+        "flaw_confidence": 5,
+        "review_id": "HKu0Jpj3O5"
+    },
+    {
+        "flaw_id": 3,
+        "start_of_flaw": "In (right), following , we plot",
+        "end_of_flaw": "noise phenomenon.",
+        "flaw_category": "1d",
+        "flaw_title": "Insufficient Quantitative Analysis of Gradient Noise Distribution",
+        "flaw_description": "The initial assessment of heavy-tailed stochastic gradient noise relied heavily on visual inspection of histograms, which is insufficient for rigorous comparison. The authors acknowledged this and improved the analysis by adding quantile-quantile (QQ) plots to provide a more quantitative comparison of noise distributions.",
+        "flaw_severity": "medium",
+        "flaw_confidence": 5,
+        "review_id": "cr6PdyUnzk"
+    },
+    {
+        "flaw_id": 4,
+        "start_of_flaw": "We emphasize here that the linear attention",
+        "end_of_flaw": "without the softmax activation.",
+        "flaw_category": "4a",
+        "flaw_title": "Lack of Discussion on Softmax vs. Linear Attention Behavior",
+        "flaw_description": "The paper initially lacked a comparative discussion on how attention weights behave in linear transformers versus standard (softmax) transformers, particularly regarding sparsity or concentration. The authors acknowledged this and added a discussion in the revision.",
+        "flaw_severity": "low",
+        "flaw_confidence": 5,
+        "review_id": "HKu0Jpj3O5"
+    },
+    {
+        "flaw_id": 5,
+        "start_of_flaw": "Given matrices , we define the linear",
+        "end_of_flaw": "where .",
+        "flaw_category": "1c",
+        "flaw_title": "Missing Ablation for Attention Parameterization",
+        "flaw_description": "The paper simplified the attention mechanism by using a single matrix 'Q' instead of the standard 'WQ WK' parameterization. It initially lacked an explicit comparison or ablation study to show that this simplification does not qualitatively alter the observed optimization characteristics, which was later addressed by adding an experiment.",
+        "flaw_severity": "medium",
+        "flaw_confidence": 5,
+        "review_id": "cr6PdyUnzk"
+    },
+    {
+        "flaw_id": 6,
+        "start_of_flaw": "For these reasons, having an appropriate mathematical",
+        "end_of_flaw": "understanding of transformer optimization.",
+        "flaw_category": "4a",
+        "flaw_title": "Unclear Delimitation of Research Scope",
+        "flaw_description": "The initial presentation of the work's scope was not explicitly clear about what specific aspects of transformer optimization the simplified model aimed to cover or what phenomena it intentionally excluded. The authors acknowledged the need for clarification and refined the introduction.",
+        "flaw_severity": "low",
+        "flaw_confidence": 5,
+        "review_id": "cr6PdyUnzk"
+    },
+    {
+        "flaw_id": 7,
+        "start_of_flaw": "Finally, for a positive integer , we define",
+        "end_of_flaw": "by theoretical considerations.",
+        "flaw_category": "4a",
+        "flaw_title": "Unspecified Omission of Feed Forward Networks (FFN)",
+        "flaw_description": "The description of the linear transformer architecture did not explicitly state the absence of Feed Forward Networks (FFNs), which are a standard component in vanilla transformers. This omission could lead to ambiguity for readers expecting a clearer architectural comparison. The authors corrected this by explicitly mentioning it.",
+        "flaw_severity": "low",
+        "flaw_confidence": 5,
+        "review_id": "QQAc62zhnn"
+    },
+    {
+        "flaw_id": 8,
+        "start_of_flaw": "For each different setting, we pick the",
+        "end_of_flaw": "for the results.",
+        "flaw_category": "4b",
+        "flow_title": "Missing Hyperparameter Details for Reproducibility",
+        "flaw_description": "The paper initially lacked a concise summary of detailed training recipes and hyperparameters, making it challenging for others to reproduce the experimental results. The authors addressed this by adding a summary of hyperparameters in an appendix and providing the code.",
+        "flaw_severity": "medium",
+        "flaw_confidence": 5,
+        "review_id": "QQAc62zhnn"
+    },
+    {
+        "flaw_id": 9,
+        "start_of_flaw": "The data distribution can be thought of",
+        "end_of_flaw": "as we detail below.",
+        "flaw_category": "4a",
+        "flaw_title": "Inconsistent Notation and Dimensionality Typos",
+        "flaw_description": "The paper contained inconsistencies in notation (e.g., whether covariates were row or column vectors) and typos in matrix dimensions within the description of the data distribution and input matrix formulation in Section 3.1. These errors caused confusion and reduced clarity, which the authors corrected.",
+        "flaw_severity": "low",
+        "flaw_confidence": 5,
+        "review_id": "QQAc62zhnn"
+    },
+    {
+        "flaw_id": 10,
+        "start_of_flaw": "The features defined above are typically of great",
+        "end_of_flaw": "transformer optimization.",
+        "flaw_category": "4a",
+        "flaw_title": "Minor Presentation and Grammatical Inconsistencies",
+        "flaw_description": "The paper contained minor grammatical issues, such as the use of 'features' instead of 'concepts' in Section 2.1, and inconsistent capitalization of 'Transformers' throughout the manuscript. These small errors detracted from the overall polish and clarity, and were corrected by the authors.",
+        "flaw_severity": "low",
+        "flaw_confidence": 5,
+        "review_id": "QQAc62zhnn"
+    }
+]
