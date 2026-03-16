@@ -175,7 +175,7 @@ body{
     background:white;
     border:1px solid #ccc;
     padding:16px;
-    width:360px;
+    width:650px;
     box-shadow:0 2px 12px rgba(0,0,0,0.25);
     z-index:2000;
 }
@@ -203,6 +203,45 @@ body{
     margin-bottom:18px;
     border:none;
     border-top:1px solid #ddd;
+}
+
+.dialog-top {
+    display: flex;
+    gap: 16px;
+}
+
+.dialog-col {
+    flex: 1;
+}
+
+.dialog-col b {
+    display: inline;
+}
+
+.dialog-warning {
+    margin-top: 5px;
+    padding: 10px 12px;
+    background:#fff8e6;
+    border:1px solid #f0d98c;
+    border-left:6px solid #e0b400;
+    border-radius: 6px;
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.dialog-input,
+.dialog-textarea,
+.dialog-select{
+    width:100%;
+    padding:6px 8px;
+    border:1px solid #ccc;
+    border-radius:4px;
+    font-size:14px;
+    box-sizing:border-box;
+}
+
+.dialog-textarea{
+    resize:vertical;
 }
 
 .scale-options {
@@ -469,45 +508,51 @@ Camera Ready Paper
 <!-- Survey progress -->
 <div class="survey-panel" id="survey-progress-panel">
 
-<div class="survey-title">
-Survey Progress
-</div>
-<div id="survey-warning" class="survey-warning"></div>
+    <div class="survey-title">
+    Survey Progress
+    </div>
+    <div id="survey-warning" class="survey-warning"></div>
 
-<div class="survey-row">
-Flaw Surveys
-<div id="flaw-survey-status" class="survey-grid"></div>
+    <div class="survey-row">
+    Flaw Surveys
+    <div id="flaw-survey-status" class="survey-grid"></div>
+    </div>
+
+    <div class="survey-row">
+    Addressed Flaw Surveys
+    <div id="addressed-survey-status" class="survey-grid"></div>
+    </div>
+
+    <button id="download-surveys-panel-btn" onclick="downloadAllSurveys()">
+    Download Survey Results
+    </button>
+
+    <hr>
+    <div class="survey-restore">
+        <div class="survey-title">
+            Continue from a previous survey
+        </div>
+        <p>If you previously downloaded your survey responses, you can upload the JSON file here to continue working.</p>
+        
+
+        <input type="file" id="survey-upload" accept=".json">
+    </div>
 </div>
 
-<div class="survey-row">
-Addressed Flaw Surveys
-<div id="addressed-survey-status" class="survey-grid"></div>
-</div>
 
-<button id="download-surveys-panel-btn" onclick="downloadAllSurveys()">
-Download Survey Results
-</button>
-</div>
 
 <!-- Floating button -->
 <button id="survey-progress-btn" onclick="scrollToSurveyPanel()">
-Survey Progress
+Survey Progress and Download
 </button>
 
 <script>
-
-function closeInstructions(){
-    const box = document.getElementById("instructions-box")
-    if(box){
-        box.style.display = "none"
-    }
-}
-
 // Initialize the survey storage
 let surveyData = {
     flaws_survey: {},          // key: flawId, value: survey answers
     flaws_addressed_survey: {} // key: flawId, value: survey answers
 };
+
 const openreviewPaperId = {{ openreview_paper_id | tojson }};
 const flawData = {{ flaws | tojson }};
 const reviewData = {{ reviews | tojson }};
@@ -518,11 +563,44 @@ let dialogs = {
     camera: null
 };
 
+const flawCategories = {
+    "1a": "Insufficient Baselines/Comparisons",
+    "1b": "Weak or Limited Scope of Experiments",
+    "1c": "Lack of Necessary Ablation or Analysis",
+    "1d": "Flawed Evaluation Metrics or Setup",
+    "2a": "Fundamental Technical Limitation",
+    "2b": "Missing or Incomplete Theoretical Foundation",
+    "2c": "Technical or Mathematical Error",
+    "3a": "Insufficient Novelty / Unacknowledged Prior Work",
+    "3b": "Overstated Claims or Mismatch Between Claim and Evidence",
+    "4a": "Lack of Clarity / Ambiguity",
+    "4b": "Missing Implementation or Methodological Details",
+    "5a": "Unacknowledged Technical Limitations",
+    "5b": "Unaddressed Ethical or Societal Impact"
+}
+const categoryOptions = Object.entries(flawCategories)
+    .map(([key, desc]) =>
+        `<option value="${key}" data-key="${key}">
+            ${key} — ${desc}
+        </option>`
+    )
+    .join("");
+
+function closeInstructions(){
+    const box = document.getElementById("instructions-box")
+    if(box){
+        box.style.display = "none"
+    }
+}
 
 function initializeSurveyStatus() {
 
     const flawContainer = document.getElementById("flaw-survey-status");
     const addressedContainer = document.getElementById("addressed-survey-status");
+
+    // Remove existing children
+    flawContainer.innerHTML = "";
+    addressedContainer.innerHTML = "";
 
     flawData.forEach(f => {
 
@@ -538,6 +616,28 @@ function initializeSurveyStatus() {
         el2.innerText = f.flaw_id;
         addressedContainer.appendChild(el2);
 
+    });
+
+}
+
+function updateSurveyStatus() {
+
+    // Update flaws survey status
+    Object.keys(surveyData.flaws_survey).forEach(flawId => {
+        const el = document.getElementById(`flaw-survey-${flawId}`);
+        if (el) {
+            el.classList.remove("pending");
+            el.classList.add("done");
+        }
+    });
+
+    // Update addressed survey status
+    Object.keys(surveyData.flaws_addressed_survey).forEach(flawId => {
+        const el = document.getElementById(`addr-survey-${flawId}`);
+        if (el) {
+            el.classList.remove("pending");
+            el.classList.add("done");
+        }
     });
 
 }
@@ -745,8 +845,7 @@ document.querySelectorAll('.flaw')
                 reviewURL = `https://openreview.net/forum?id=${openreviewPaperId}#:~:text=${encodedHighlight}`;
             }
             
-
-            const html = `
+            const flawInfo = `
             <h4>Flaw ${id}</h4>
             <b>${flaw.flaw_title}</b><br><br>
             ${flaw.flaw_description}<br><br>
@@ -756,6 +855,67 @@ document.querySelectorAll('.flaw')
             <b>Confidence:</b> ${flaw.flaw_confidence}<br>
             <b>Review ID:</b> 
             <a href="${reviewURL}" target="_blank">${flaw.review_id}</a>
+            `;
+
+            const flawUpdateInfo = `
+            <h4>Flaw ${id} Update</h4>
+            <div class="dialog-warning">
+                You can update the flaw details by adding or selecting the required details below. Save your updates along with the survey questions by clicking the Save button below.
+            </div>
+
+            Flaw Title<br>
+            <input 
+                type="text"
+                class="dialog-input"
+                name="flaw_title"
+            />
+            <br><br>
+
+            Flaw Description<br>
+            <textarea 
+                rows="4"
+                class="dialog-textarea"
+                name="flaw_description"
+            ></textarea>
+            <br><br>
+
+            Flaw Category<br>
+            <select class="dialog-select" name="flaw_category">
+                <option value="">Select flaw category</option>
+                ${categoryOptions}
+            </select>
+            <br><br>
+
+            Severity<br>
+            <select class="dialog-select" name="flaw_severity">
+                <option value="" selected>Select severity</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+            </select>
+            <br><br>
+
+            Confidence<br>
+            <select class="dialog-select" name="flaw_confidence">
+                <option value="" selected>Select confidence</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+            </select>
+
+            `;
+
+            const html = `
+            <div class="dialog-top">
+                <div class="dialog-col">
+                    ${flawInfo}
+                </div>
+                <div class="dialog-col">
+                    ${flawUpdateInfo}
+                </div>
+            </div>
 
             ${submittedSurveyHTML(id)}
             `
@@ -772,11 +932,59 @@ document.querySelectorAll('.flaw')
 
             const flaw = addressedData.find(f=>f.flaw_id === id)
 
-            const html = `
+            const flawAddressedInfo = `
             <h4>Addressed Flaw ${id}</h4>
             ${flaw.flaw_addressed_description}<br><br>
             <b>Quality:</b> ${flaw.flaw_addressed_quality}<br>
             <b>Confidence:</b> ${flaw.flaw_addressed_confidence}
+            `;
+
+            const flawAddressedUpdateInfo = `
+            <h4>Addressed Flaw ${id} Update</h4>
+            <div class="dialog-warning">
+                You can update the addressed flaw details by adding or selecting the required details below. Save your updates along with the survey questions by clicking the Save button below.
+            </div>
+
+            Addressed Flaw Description<br>
+            <textarea 
+                rows="4"
+                class="dialog-textarea"
+                name="flaw_addressed_description"
+            ></textarea>
+            <br><br>
+
+            Quality<br>
+            <select class="dialog-select" name="flaw_addressed_quality">
+                <option value="" selected>Select quality</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+            </select>
+            <br><br>
+
+            Confidence<br>
+            <select class="dialog-select" name="flaw_addressed_confidence">
+                <option value="" selected>Select confidence</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+            </select>
+
+            `;
+
+            const html = `
+            <div class="dialog-top">
+                <div class="dialog-col">
+                    ${flawAddressedInfo}
+                </div>
+                <div class="dialog-col">
+                    ${flawAddressedUpdateInfo}
+                </div>
+            </div>
 
             ${addressedSurveyHTML(id)}
             `
@@ -908,8 +1116,8 @@ function addressedSurveyHTML(flawId) {
     <small class="scale-note">(1 = Poor, 5 = Excellent)</small>
     <hr>
 
-    <!-- Q3: LLM Confidence -->
-    <p>How reasonable is the LLM’s confidence rating for this addressed flaw?</p>
+    <!-- Q3: Confidence -->
+    <p>How reasonable is the confidence rating for this addressed flaw?</p>
     <div class="scale-options">
         <input type="radio" name="addr${flawId}-confidence" id="addr${flawId}-conf-1" value="1">
         <label for="addr${flawId}-conf-1">1</label>
@@ -923,6 +1131,17 @@ function addressedSurveyHTML(flawId) {
         <label for="addr${flawId}-conf-5">5</label>
     </div>
     <small class="scale-note">(1 = Not reasonable, 5 = Very reasonable)</small>
+    <hr>
+
+    <!-- Q4: Who -->
+    <p>Who do you think addressed this flaw?</p>
+    <div class="scale-options">
+        <input type="radio" name="addr${flawId}-source" id="addr${flawId}-src-human" value="human">
+        <label for="addr${flawId}-src-human">Human</label>
+
+        <input type="radio" name="addr${flawId}-source" id="addr${flawId}-src-llm" value="llm">
+        <label for="addr${flawId}-src-llm">LLM</label>
+    </div>
 
     <button class="survey-save-btn" onclick="saveSurvey(${flawId}, 'camera')">Save</button>
     `;
@@ -940,7 +1159,7 @@ function showToast(message) {
     setTimeout(() => {
         toast.classList.add("hide");
         setTimeout(() => toast.remove(), 500);
-    }, 2000);
+    }, 5000);
 }
 
 function saveSurvey(flawId, side) {
@@ -950,25 +1169,59 @@ function saveSurvey(flawId, side) {
     // Remove previous error message if any
     const prevError = dialog.querySelector(".survey-error");
     if(prevError) prevError.remove();
-
-    // Collect all questions (radio groups)
-    const groups = Array.from(dialog.querySelectorAll("div.scale-options"));
-    let allAnswered = true;
+    
+    let allSurveyAnswered = true;
+    let allEditsAnswered = true;
     let answers = {};
 
-    groups.forEach((group, index) => {
+    // 1. Collect radio inputs
+    const groups = Array.from(dialog.querySelectorAll("div.scale-options"));
+    const radioGroups = Array.from(dialog.querySelectorAll("div.scale-options"));
+    radioGroups.forEach((group, index) => {
         const radios = group.querySelectorAll("input[type='radio']");
         const selected = Array.from(radios).find(r => r.checked);
         if (!selected) {
-            allAnswered = false;
+            allSurveyAnswered = false;
         } else {
-            // Map to question_1, question_2, ...
             answers[`question_${index + 1}`] = selected.value;
         }
     });
 
+    // 2. Collect text inputs
+    const textInputs = Array.from(dialog.querySelectorAll("input.dialog-input"));
+    textInputs.forEach((input, index) => {
+        if (!input.value.trim()) allEditsAnswered = false;
+        answers[input.name] = input.value.trim();
+    });
 
-    if (!allAnswered) {
+    // 3. Collect textareas
+    const textareas = Array.from(dialog.querySelectorAll("textarea.dialog-textarea"));
+    textareas.forEach((ta, index) => {
+        if (!ta.value.trim()) allEditsAnswered = false;
+        answers[ta.name] = ta.value.trim();
+    });
+
+    // 4. Collect selects
+    const selects = Array.from(dialog.querySelectorAll("select.dialog-select"));
+    selects.forEach((sel, index) => {
+        if (!sel.value) allEditsAnswered = false;
+        answers[sel.name] = sel.value;
+    });
+
+    // Show error if not all edits are answered
+    if (!allEditsAnswered) {
+        const error = document.createElement("div");
+        error.className = "survey-error";
+        error.style.color = "red";
+        error.style.marginTop = "8px";
+        error.innerText = "Please fill all updates in the edit section before saving.";
+        const saveBtn = dialog.querySelector(".survey-save-btn");
+        if (saveBtn) saveBtn.parentNode.insertBefore(error, saveBtn);
+        return; // stop saving
+    }
+
+    // Show error if not all survey questions are answered
+    if (!allSurveyAnswered) {
         const error = document.createElement("div");
         error.className = "survey-error";
         error.style.color = "red";
@@ -992,27 +1245,12 @@ function saveSurvey(flawId, side) {
 
     // Show feedback
     if (side === 'submitted') {
-        showToast(`Survey for Flaw ${flawId} saved!`);
+        showToast(`Updates and Survey for Flaw ${flawId} saved!`);
     } else if (side === 'camera') {
-        showToast(`Survey for Flaw Addressed ${flawId} saved!`);
+        showToast(`Updates and Survey for Flaw Addressed ${flawId} saved!`);
     }
 
-    if (side === "submitted") {
-        const el = document.getElementById(`flaw-survey-${flawId}`);
-        if (el) {
-            el.classList.remove("pending");
-            el.classList.add("done");
-        }
-    }
-
-    if (side === "camera") {
-        const el = document.getElementById(`addr-survey-${flawId}`);
-        if (el) {
-            el.classList.remove("pending");
-            el.classList.add("done");
-        }
-    }
-
+    updateSurveyStatus();
     updateSurveyWarning();
 
 }
@@ -1052,6 +1290,44 @@ function downloadAllSurveys() {
     dlAnchor.setAttribute("download", "meta_review_surveys.json");
     dlAnchor.click();
 }
+
+window.addEventListener("beforeunload", function (e) {
+    e.preventDefault();
+    e.returnValue = true;
+});
+
+// Upload json survey
+document.getElementById("survey-upload").addEventListener("change", function (event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function (e) {
+        try {
+            const data = JSON.parse(e.target.result);
+
+            if (!data.flaws_survey || !data.flaws_addressed_survey) {
+                alert("Invalid survey file.");
+                return;
+            }
+
+            surveyData = data;
+            showToast("Survey data loaded successfully.");
+            initializeSurveyStatus();
+            updateSurveyStatus();
+            updateSurveyWarning();
+
+        } catch (err) {
+            console.error("Error loading survey file:", err);
+            alert("Could not read the survey file.");
+        }
+        // Clear file input
+        event.target.value = "";
+    };
+
+    reader.readAsText(file);
+});
 
 </script>
 
