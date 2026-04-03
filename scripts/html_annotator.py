@@ -38,6 +38,9 @@ class HTMLAnnotator:
         self.flaws = []
         self.flaws_addressed = []
 
+        self.missing_flaws = []
+        self.missing_flaws_addressed = []
+
         self.annotated_html = ""
 
     def load_html_papers(self, submitted_filepath, camera_ready_filepath):
@@ -57,24 +60,25 @@ class HTMLAnnotator:
         self.reviews = read_json_file(directory=json_directory, filename=json_file)
         print("[+] Loaded paper reviews")
 
-    def _highlight_segment(self, html, start, end, flaw_id, side, is_addressed=True):
-
-        flaw_or_addressed = "flaw" if side == "submitted" else "flaw addressed"
+    def _highlight_segment(self, html, start, end, flaw_id, side):
 
         pattern = re.escape(start) + r"(.*?)" + re.escape(end)
 
         match = re.search(pattern, html, flags=re.DOTALL)
 
         if not match:
-            print(f"❌ Could not locate {flaw_or_addressed} {flaw_id}")
+            if side == "submitted":
+                print(f"❌ Could not locate flaw {flaw_id}")
+                self.missing_flaws.append(flaw_id)
+            else:
+                print(f"❌ Could not locate flaw addressed {flaw_id}")
+                self.missing_flaws_addressed.append(flaw_id)
             return html
-
-        extra_class = "" if is_addressed else "unaddressed"
 
         def replacer(m):
             segment = m.group(0)
             return (
-                f'<span class="flaw {extra_class}" '
+                f'<span class="flaw" '
                 f'data-flaw-id="{flaw_id}" '
                 f'data-side="{side}">{segment}</span>'
             )
@@ -92,10 +96,14 @@ class HTMLAnnotator:
 
         for flaw in self.flaws:
 
-            flaw["is_addressed"] = flaw["flaw_id"] in addressed_ids
-            flaw["flaw_category_description"] = flaw_categories[flaw["flaw_category"]]
-
             flaw_id = flaw["flaw_id"]
+
+            is_addressed = flaw_id in addressed_ids
+            # add not addressed flaws to missing flaws addressed
+            if not is_addressed:
+                self.missing_flaws_addressed.append(flaw_id)
+            flaw["is_addressed"] = is_addressed
+            flaw["flaw_category_description"] = flaw_categories[flaw["flaw_category"]]
 
             start = flaw.get("start_of_flaw")
             end = flaw.get("end_of_flaw")
@@ -119,6 +127,7 @@ class HTMLAnnotator:
             end = flaw.get("end_of_flaw_addressed_text")
 
             if not start or not end:
+                self.missing_flaws_addressed.append(flaw_id)
                 continue
 
             camera_html = self._highlight_segment(
@@ -140,6 +149,8 @@ class HTMLAnnotator:
             camera_ready_paper_html=camera_html,
             flaws=self.flaws,
             flaws_addressed=self.flaws_addressed,
+            missing_flaws=self.missing_flaws,
+            missing_flaws_addressed=self.missing_flaws_addressed,
             reviews=self.reviews,
             openreview_paper_id=self.openreview_paper_id
         )

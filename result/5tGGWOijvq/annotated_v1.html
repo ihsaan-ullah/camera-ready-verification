@@ -175,7 +175,7 @@ body{
     background:white;
     border:1px solid #ccc;
     padding:16px;
-    width:360px;
+    width:400px;
     box-shadow:0 2px 12px rgba(0,0,0,0.25);
     z-index:2000;
 }
@@ -203,6 +203,15 @@ body{
     margin-bottom:18px;
     border:none;
     border-top:1px solid #ddd;
+}
+
+.dialog-textarea{
+    width:100%;
+    padding:6px 8px;
+    border:1px solid #ccc;
+    border-radius:4px;
+    font-size:14px;
+    box-sizing:border-box;
 }
 
 .scale-options {
@@ -389,6 +398,37 @@ body{
     box-shadow: 0 6px 16px rgba(0,0,0,0.25);
 }
 
+/* Badge for dilaog: filled/unfilled */
+.badge {
+    margin-left:8px;
+    padding:2px 8px;
+    font-size:12px;
+    border-radius:999px;
+    font-weight:400;
+}
+
+.badge-filled {
+    background:#16a34a;
+    color:white;
+}
+
+.badge-empty {
+    background:#e5e7eb;
+    color:#374151;
+}
+
+/* Flaw Errors */
+.flaw-error-box {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: #ffede6;
+    border: 1px solid #f0a08c;
+    border-left: 6px solid #e03400;
+    border-radius: 6px;
+    font-size: 16px;
+    color: #374151;
+}
+
 </style>
 </head>
 
@@ -467,6 +507,10 @@ Flaw Navigation
 </div>
 
 </div>
+
+<!-- Error containers -->
+<div id="submitted-error" class="flaw-error-box" style="display:none;"></div>
+<div id="camera-error" class="flaw-error-box" style="display:none;"></div>
 
 </div>
 
@@ -600,7 +644,7 @@ where $<code>Q_{\tilde D}</code>$ is the quantile function of the loss distribut
 </figure>
 
 <h1>Experiments</h1>
-<p><span class="flaw " data-flaw-id="5" data-side="submitted">We perform experiments to investigate the effects of using our framework in various high-impact applications including code generation, chatbots, and medical question summarization. While we summarize experiment parameters and results here, Appendix <a href="#app:exp_details" data-reference-type="ref" data-reference="app:exp_details">10</a> contains a rich set of example prompts, task inputs, model generations, and other helpful details for understanding both the framework and our particular results. Also, though we utilize non-trivial GPU resources in producing the generations for our experiments, we note that the PRC procedure itself can be easily run on a typical personal computer with only CPUs.</span></p>
+<p><span class="flaw" data-flaw-id="5" data-side="submitted">We perform experiments to investigate the effects of using our framework in various high-impact applications including code generation, chatbots, and medical question summarization. While we summarize experiment parameters and results here, Appendix <a href="#app:exp_details" data-reference-type="ref" data-reference="app:exp_details">10</a> contains a rich set of example prompts, task inputs, model generations, and other helpful details for understanding both the framework and our particular results. Also, though we utilize non-trivial GPU resources in producing the generations for our experiments, we note that the PRC procedure itself can be easily run on a typical personal computer with only CPUs.</span></p>
 <h2>Bounding Expected Loss in Code Generation</h2>
 <p>We begin with a simple application of the PRC framework to the code generation setting, where $<code>\hat P</code>$ contains only a single system prompt. The goal is to provide a high-probability upper bound on the average error rate of a prompt when it has already been chosen and benchmarked with some validation set. Here, PRC can be applied “for free,” since no extra data is needed beyond the previously mentioned validation set to ensure that the average loss will likely be in some acceptable range. We perform our experiment using the MBPP code generation dataset and CodeLlama-7b model, and consider the mean loss with respect to a pass@10 loss function, where 10 generations are produced and 0 loss is assigned if at least 1 generation passes all unit tests and 1 is assigned otherwise. For a more robust illustration, two separate settings are examined: one setting where there is only a system prompt provided, and one where there are also 3 exemplars included. The system prompt appended to each input example is: <em>You are required to write code that generates the specified output.</em></p>
 <p>We run 100 trials, each with 500 randomly sampled validation datapoints and $<code>\delta=0.05</code>$. We compare the empirical average loss on the remaining test examples with the risk bounds produced by Learn Then Test using two different bounding inequalities: the well-known Hoeffding bound, and a more sophisticated Hoeffding-Bentkus (HB) bound introduced by . See Figure <a href="#fig:mean_comps" data-reference-type="ref" data-reference="fig:mean_comps">8</a> for results. HB outperforms the Hoeffding bound, and provides tight control relative to the empirical average loss on the held-out test set. Thus the risk bound $<code>\hat R</code>$ returned by PRC using the LTT-HB bound serves as a rigorous and reliable high-probability bound on the chosen risk measure, and this bespoke method outperforms the more naive application of Hoeffding. Given the lightweight and effective nature of this technique, when deploying an LLM based on mean loss across a validation dataset, one should also know a high-probability bound on that mean loss across the entire population.</p>
@@ -689,7 +733,7 @@ Median risk scores for toxicity loss under the target Red Team data distribution
 </div>
 
 <h2>Bounding Loss Dispersion in Medical Summarization</h2>
-<p><span class="flaw " data-flaw-id="7" data-side="submitted">In domains such as medicine where the application of LLMs has the potential to significantly impact society, it may be sensible to sacrifice some top-end performance in order to ensure that errors are distributed more evenly across the population. Thus for our final experiment we study the task of medical question summarization using the MeQSum dataset, where the goal is to produce a succinct summary of a user’s medical inquiry that can be quickly and easily read by a doctor. We examine the effects of selecting a prompt in consideration of high probability upper bounds on a common measure of societal dispersion and outcome inequality, the Gini coefficient. Summaries are generated using the 40B parameter version of the Falcon Instruct model , and scored using the typical ROUGE-$<code>L</code>$ metric (which is used both for PRC and final model selection via average performance). Loss is controlled at the level $<code>\alpha=0.33</code>$ using 500 randomly-sampled validation points.</p>
+<p><span class="flaw" data-flaw-id="7" data-side="submitted">In domains such as medicine where the application of LLMs has the potential to significantly impact society, it may be sensible to sacrifice some top-end performance in order to ensure that errors are distributed more evenly across the population. Thus for our final experiment we study the task of medical question summarization using the MeQSum dataset, where the goal is to produce a succinct summary of a user’s medical inquiry that can be quickly and easily read by a doctor. We examine the effects of selecting a prompt in consideration of high probability upper bounds on a common measure of societal dispersion and outcome inequality, the Gini coefficient. Summaries are generated using the 40B parameter version of the Falcon Instruct model , and scored using the typical ROUGE-$<code>L</code>$ metric (which is used both for PRC and final model selection via average performance). Loss is controlled at the level $<code>\alpha=0.33</code>$ using 500 randomly-sampled validation points.</p>
 <p>Results are displayed in Figure <a href="#fig:medqsum_gini" data-reference-type="ref" data-reference="fig:medqsum_gini">10</a>, where $<code>p^*_{RGE}</code>$ is the prompt that produces the best ROUGE-L scores and $<code>p^*_{PRC}</code>$ is the prompt that produces the best ROUGE-L after satisfying the high-probability constraint on the Gini coefficient. Here there is a clear trade-off between average summarization scores and the even dispersion of loss outcomes across the population. By considering the bound on the Gini coefficient, the user deploying the LLM selects a prompt that produces more equal loss across the distribution while still producing accurate summaries.</span></p>
 <figure id="fig:medqsum_gini">
 <img src="./figures/medqsum_model_40_rougeL_gini_loss_dist_with_text.png"" style="width:66.0%" />
@@ -703,9 +747,9 @@ Median risk scores for toxicity loss under the target Red Team data distribution
 <p><strong>Randomness in LLM Output:</strong> In many popular LLM applications, including chatbots, the model is used with a certain <em>temperature</em> setting that determines the randomness in its output. Usually, a temperature of zero corresponds to deterministic output, with randomness increasing as temperature increases. We only assume that the temperature (or distribution over temperatures) used to produce the loss values input to PRC is the same as that in deployment.</p>
 <p><strong>Tightness of Bounds:</strong> We omit analysis or comparison of the various possible methods for bounding a given risk measure, as that is beyond the scope of this paper. We have chosen the current state of the art methods for bounding the measures covered herein; new algorithms bearing tighter bounds can be easily integrated into our framework, since the bounding methods are seen as black box and we only need them to return $<code>\hat R</code>$. We do note that all of the described bounds get tighter as the size of the validation set increases.</p>
 <p><strong>Bounds on Multiple Loss/Risk Functions:</strong> For simplicity, the earlier description of our Prompt Risk Control algorithm was focused on the setting where the user chooses a single loss function and a single risk function. This need not be the case. To handle multiple loss and/or risk functions, one only needs to ensure that the multiple hypothesis testing is done with the correct statistical (i.e., Bonferroni) correction based on the number of tests being performed. In the case of LTT, a test consists of a pair of prompt and loss function for which the risk according to the mean should be bounded. For QRC and SDC, a test consists of a pair of prompt and loss function for which the quantile function should be bounded; this quantile bound can be post-processed to measure many risk scores without further correction. Given multiple valid risk bounds, a set of risk-controlling prompts can be selected based on a composite sum of these risk bounds, or else based on a set of thresholds $<code>\alpha_1,\alpha_2,...,\alpha_k</code>$ corresponding to each chosen target measure. For a more detailed description of this process, refer to , , and .</p>
-<p><strong>Computational Cost:</strong> <span class="flaw " data-flaw-id="3" data-side="submitted">Because of the general nature of our framework and the interchangeability of many parts, it is difficult to concisely characterize its runtime. Most of the computational cost in applying PRC will likely come from producing the LLM output (although this depends on the chosen model and amount of GPU resources available). As a result, PRC will be most lightweight when it is used to bound a metric that was already being scored, for example bounding the Gini coefficient under the loss function being used for model selection (as in our medical summaries example). While producing the Berk-Jones bound used in QRC and SDC does have a computational cost of $<code>\mathcal O(n^2)</code>$, this only has to be calculated once for a given pair of $<code>(n,\delta)</code>$, and thus does not have to be recomputed for each candidate prompt (or application of the PRC algorithm).</span></p>
+<p><strong>Computational Cost:</strong> <span class="flaw" data-flaw-id="3" data-side="submitted">Because of the general nature of our framework and the interchangeability of many parts, it is difficult to concisely characterize its runtime. Most of the computational cost in applying PRC will likely come from producing the LLM output (although this depends on the chosen model and amount of GPU resources available). As a result, PRC will be most lightweight when it is used to bound a metric that was already being scored, for example bounding the Gini coefficient under the loss function being used for model selection (as in our medical summaries example). While producing the Berk-Jones bound used in QRC and SDC does have a computational cost of $<code>\mathcal O(n^2)</code>$, this only has to be calculated once for a given pair of $<code>(n,\delta)</code>$, and thus does not have to be recomputed for each candidate prompt (or application of the PRC algorithm).</span></p>
 <h1>Limitations</h1>
-<p><span class="flaw " data-flaw-id="2" data-side="submitted">One key limitation of our framework is that the user-designated risk constraints may not always be satisfiable (i.e., PRC returns the empty set), and models may need to be refined before they can be controlled at an acceptable level. In such cases, an organization might conclude that they need to further develop the model until it obtains a reasonable PRC risk guarantee before moving to deployment. See Appendix <a href="#app:limitations" data-reference-type="ref" data-reference="app:limitations">9</a> for more discussion and examples of such cases. It should also be noted that in order for prompts chosen according to these bounds to produce the desired outcomes, the loss function must be able to accurately evaluate the quality of the model generations. However, the evaluation of LLMs, especially with respect to generative tasks, is an open challenge, with prominent metrics like BLEU and ROUGE having been shown to be insufficient for capturing the true quality of model generations . Though this exists as a limitation of our framework for now, the strengthening of evaluation metrics and protocols will directly improve the strength of the guarantees issued under PRC.</p>
+<p><span class="flaw" data-flaw-id="2" data-side="submitted">One key limitation of our framework is that the user-designated risk constraints may not always be satisfiable (i.e., PRC returns the empty set), and models may need to be refined before they can be controlled at an acceptable level. In such cases, an organization might conclude that they need to further develop the model until it obtains a reasonable PRC risk guarantee before moving to deployment. See Appendix <a href="#app:limitations" data-reference-type="ref" data-reference="app:limitations">9</a> for more discussion and examples of such cases. It should also be noted that in order for prompts chosen according to these bounds to produce the desired outcomes, the loss function must be able to accurately evaluate the quality of the model generations. However, the evaluation of LLMs, especially with respect to generative tasks, is an open challenge, with prominent metrics like BLEU and ROUGE having been shown to be insufficient for capturing the true quality of model generations . Though this exists as a limitation of our framework for now, the strengthening of evaluation metrics and protocols will directly improve the strength of the guarantees issued under PRC.</p>
 <p>In addition, it is important that the high-probability guarantees produced by our framework are understood carefully. For example, they do not provide guarantees for each individual in the population. Future work could focus on bounding even more extreme values of the VaR, and/or identifying those individuals who are likely to exceed the risk threshold.</span></p>
 <p>Finally, as stated throughout this paper, these bounds are dependent upon the i.i.d. assumption, even for our algorithm for distribution shift (since unlabeled target data must be i.i.d. with the true target distribution). While this condition may seem difficult to fulfill in some cases, it is not clear how non-trivial bounds can be offered in a setting where the target distribution is arbitrarily shifted and no data is available. Addressing such cases is another possible avenue for future research.</p>
 <h1>Reproducibility</h1>
@@ -1127,7 +1171,7 @@ Can pyloric stenosis cause long-term stomach problems?
 <p>[^1]: * indicates equal contribution.</p>
 <p>[^2]: Since a higher ROUGE score is better and it is bounded on $<code>[0,1]</code>$, for a given ROUGE score $<code>r</code>$ assigned to an item, the loss is $<code>l=1-r</code>$. In general we use the term loss to apply to some measures for which higher is better and others that prefer lower; we always assume the former are adjusted so lower is better.</p>
 <p>[^3]: While there are methods for handling distribution shift in DFUQ, they are specific to particular techniques or risk measures (e.g., ) and do not apply to most of the measures that we consider here.</p>
-<p>[^4]: <span class="flaw " data-flaw-id="1" data-side="submitted">The statistical techniques underlying these bounds are non-trivial, and thus explanations of how to generate these bounds are beyond the scope of this paper. However, they can be easily produced in practice using open source software (e.g., that distributed by ) and the code distributed with this paper.</span></p>
+<p>[^4]: <span class="flaw" data-flaw-id="1" data-side="submitted">The statistical techniques underlying these bounds are non-trivial, and thus explanations of how to generate these bounds are beyond the scope of this paper. However, they can be easily produced in practice using open source software (e.g., that distributed by ) and the code distributed with this paper.</span></p>
 <p>[^5]: This correction is best described in terms of the loss CDF (of which the quantile function is the inverse), which we choose not to discuss here for the sake of simplicity. Therefore this equation is left to Appendix <a href="#app:theory" data-reference-type="ref" data-reference="app:theory">8</a>, where the entire algorithm is described in depth.</p>
 <p>[^6]: This scale of dataset size is suggested by , where the algorithm for estimating importance weights was introduced.</p>
 <p>[^7]: The lower bound function is invertible as long as it is monotonic, see details in .</p>
@@ -1352,7 +1396,7 @@ Median risk scores for toxicity loss under the target Red Team data distribution
 </div>
 
 <h2>Bounding Loss Dispersion in Medical Summarization</h2>
-<p><span class="flaw " data-flaw-id="5" data-side="camera"><span class="flaw " data-flaw-id="7" data-side="camera">The naive application of machine learning models to medical tasks has been shown to lead to biased outcomes, where certain protected and minority groups receive much worse predictions than others . While many approaches to algorithmic fairness have been developed to mitigate these disparities, a large share of these techniques require demographic labels that are often unavailable, or in some cases even prohibited from being used in decision making . However, even without the ability to consider protected attributes, organizations deploying machine learning systems may employ group-unaware risk measures in order to ensure that the distribution of errors across the population is not too uneven.</span></span></p>
+<p><span class="flaw" data-flaw-id="5" data-side="camera"><span class="flaw" data-flaw-id="7" data-side="camera">The naive application of machine learning models to medical tasks has been shown to lead to biased outcomes, where certain protected and minority groups receive much worse predictions than others . While many approaches to algorithmic fairness have been developed to mitigate these disparities, a large share of these techniques require demographic labels that are often unavailable, or in some cases even prohibited from being used in decision making . However, even without the ability to consider protected attributes, organizations deploying machine learning systems may employ group-unaware risk measures in order to ensure that the distribution of errors across the population is not too uneven.</span></span></p>
 <p>To illustrate how such a measure can be applied to achieve fairer outcomes, for our final experiment we study the task of medical question summarization using the MeQSum dataset, where the goal is to produce a succinct summary of a patient’s medical inquiry that can be quickly and easily read by a doctor. We examine the effects of selecting a prompt in consideration of high probability upper bounds on a well known group-unaware measure of societal dispersion and outcome inequality, the Gini coefficient. Summaries are generated using the 40B parameter version of the Falcon Instruct model , and scored using the typical ROUGE-$<code>L</code>$ metric (which is used both for PRC and final model selection via average performance). Loss is controlled at the level $<code>\alpha=0.33</code>$ using 500 randomly-sampled validation points.</p>
 <p>Results are displayed in Figure <a href="#fig:medqsum_gini" data-reference-type="ref" data-reference="fig:medqsum_gini">10</a>, where $<code>p^*_{RGE}</code>$ is the prompt that produces the best ROUGE-L scores and $<code>p^*_{PRC}</code>$ is the prompt that produces the best ROUGE-L after satisfying the high-probability constraint on the Gini coefficient. Here there is a clear trade-off between average summarization scores and the even dispersion of loss outcomes across the population. By considering the bound on the Gini coefficient, the user deploying the LLM can select a prompt that induces more equal loss across the distribution while still producing accurate summaries.</p>
 <figure id="fig:medqsum_gini">
@@ -1370,7 +1414,7 @@ Median risk scores for toxicity loss under the target Red Team data distribution
 <p><strong>Computational Cost:</strong> Because of the general nature of our framework and the interchangeability of many parts, it is difficult to concisely characterize its runtime. Most of the computational cost in applying PRC will likely come from producing the LLM output (although this depends on the chosen model and amount of GPU resources available). As a result, PRC will be most lightweight when it is used to bound a metric that was already being scored, for example bounding the Gini coefficient under the loss function being used for model selection (as in our medical summaries example). While producing the Berk-Jones bound used in QRC and SDC does have a computational cost of $<code>\mathcal O(n^2)</code>$, this only has to be calculated once for a given pair of $<code>(n,\delta)</code>$, and thus does not have to be recomputed for each candidate prompt (or application of the PRC algorithm).</p>
 <h1>Limitations</h1>
 <p>One key limitation of our framework is that the user-designated risk constraints may not always be satisfiable (i.e., PRC returns the empty set), and models may need to be refined before they can be controlled at an acceptable level. In such cases, an organization might conclude that they need to further develop the model until it obtains a reasonable PRC risk guarantee before moving to deployment. See Appendix <a href="#app:limitations" data-reference-type="ref" data-reference="app:limitations">9</a> for more discussion and examples of such cases. It should also be noted that in order for prompts chosen according to these bounds to produce the desired outcomes, the loss function must be able to accurately evaluate the quality of the model generations. However, the evaluation of LLMs, especially with respect to generative tasks, is an open challenge, with prominent metrics like BLEU and ROUGE having been shown to be insufficient for capturing the true quality of model generations . Though this exists as a limitation of our framework for now, the strengthening of evaluation metrics and protocols will directly improve the strength of the guarantees issued under PRC.</p>
-<p><span class="flaw " data-flaw-id="2" data-side="camera">In addition, it is important that the high-probability guarantees produced by our framework are understood carefully. For example, they do not provide guarantees for each individual in the population. Future work could focus on bounding even more extreme values of the VaR, and/or identifying those individuals who are likely to exceed the risk threshold.</span></p>
+<p><span class="flaw" data-flaw-id="2" data-side="camera">In addition, it is important that the high-probability guarantees produced by our framework are understood carefully. For example, they do not provide guarantees for each individual in the population. Future work could focus on bounding even more extreme values of the VaR, and/or identifying those individuals who are likely to exceed the risk threshold.</span></p>
 <p>Finally, as stated throughout this paper, these bounds are dependent upon the i.i.d. assumption, even for our algorithm for distribution shift (since unlabeled target data must be i.i.d. with the true target distribution). While this condition may seem difficult to fulfill in some cases, it is not clear how non-trivial bounds can be offered in a setting where the target distribution is arbitrarily shifted and no data is available. Addressing such cases is another possible avenue for future research.</p>
 <h1>Reproducibility</h1>
 <p>All large language models and datasets used in our experiments are open source, and all parameters appear in the code as well as in the text. The code used to produced our experiments is available at:<br />
@@ -1858,10 +1902,14 @@ let surveyData = {
     flaws_survey: {},          // key: flawId, value: survey answers
     flaws_addressed_survey: {} // key: flawId, value: survey answers
 };
+
 const openreviewPaperId = "5tGGWOijvq";
-const flawData = [{"end_of_flaw": "and the code distributed with this paper.", "flaw_category": "4a", "flaw_category_description": "Lack of Clarity / Ambiguity: The paper is written in a way that is ambiguous or difficult to understand, preventing an expert from properly interpreting the work.", "flaw_confidence": 5, "flaw_description": "Footnote 4, which is referenced in the \u0027Quantile Risk Control\u0027 section, contains an incomplete reference: \u0027(e.g., that distributed by )\u0027. This omission should be completed to improve clarity and provide proper attribution or guidance to the mentioned open-source software.", "flaw_id": 1, "flaw_severity": "low", "flaw_title": "Incomplete Reference in Footnote", "is_addressed": false, "review_id": "roPJ9tJEtS", "start_of_flaw": "The statistical techniques underlying these bounds are non-trivial,"}, {"end_of_flaw": "and/or identifying those individuals who are likely to exceed the risk threshold.", "flaw_category": "5a", "flaw_category_description": "Unacknowledged Technical Limitations: The paper fails to discuss or downplays obvious or crucial limitations of its method, evaluation, or theoretical assumptions.", "flaw_confidence": 4, "flaw_description": "The paper lacks a discussion on how to prevent potential misinterpretations of the derived high-probability bounds and risk measures. Such misinterpretations could lead to incorrect conclusions or misuse of the framework, potentially amplifying unintended consequences in real-world deployments. The authors acknowledged this as a potential problem and committed to ensuring clarity regarding assumptions and limitations in the final version.", "flaw_id": 2, "flaw_severity": "medium", "flaw_title": "Unaddressed Potential for Misinterpretation of Bounds", "is_addressed": true, "review_id": "roPJ9tJEtS", "start_of_flaw": "One key limitation of our framework is that the user-designated risk constraints"}, {"end_of_flaw": "or application of the PRC algorithm).", "flaw_category": "4a", "flaw_category_description": "Lack of Clarity / Ambiguity: The paper is written in a way that is ambiguous or difficult to understand, preventing an expert from properly interpreting the work.", "flaw_confidence": 5, "flaw_description": "The paper does not provide sufficient clarity or explicit strategies for efficiently evaluating Prompt Risk Control (PRC) when faced with a large set of candidate prompts. While computational costs for specific bounds are mentioned, the trade-off between the number of candidate prompts and the tightness of the bounds, as well as practical mitigation strategies like early stopping, are not adequately discussed. The authors acknowledged this trade-off and committed to making it clearer in their writing.", "flaw_id": 3, "flaw_severity": "medium", "flaw_title": "Insufficient Discussion of Scalability with Large Prompt Sets", "is_addressed": false, "review_id": "gJ1qs6Immo", "start_of_flaw": "Because of the general nature of our framework and the interchangeability of many parts,"}, {"end_of_flaw": "sabotaging a roller coaster.", "flaw_category": "4a", "flaw_category_description": "Lack of Clarity / Ambiguity: The paper is written in a way that is ambiguous or difficult to understand, preventing an expert from properly interpreting the work.", "flaw_confidence": 5, "flaw_description": "The illustrative examples in Table 1 and Table 2 of the chatbot experiment are limited. Specifically, a direct comparison showing how the PRC-selected prompt responds to the exact human query that produced the unacceptable VaR output under the best-reward-selected prompt would greatly enhance the clarity and impact of the results. The authors agreed to include this output and other illustrative sample query-response pairs in the final draft.", "flaw_id": 4, "flaw_severity": "low", "flaw_title": "Limited Illustrative Examples in Chatbot Experiment Tables", "is_addressed": true, "review_id": "gJ1qs6Immo", "start_of_flaw": "Figure 9 shows the results for this experiment. On the left,"}, {"end_of_flaw": "on a typical personal computer with only CPUs.", "flaw_category": "4a", "flaw_category_description": "Lack of Clarity / Ambiguity: The paper is written in a way that is ambiguous or difficult to understand, preventing an expert from properly interpreting the work.", "flaw_confidence": 5, "flaw_description": "The paper lacks a clear and comprehensive explanation of the rationale behind applying specific Prompt Risk Control (PRC) methods (e.g., Learn Then Test, Quantile Risk Control) exclusively to particular experimental applications (e.g., code generation, chatbot toxicity). Greater exposition on how each experimental configuration was chosen would improve reader understanding of the framework\u0027s practical application. The authors committed to refining the writing in the experiments section to clarify these choices.", "flaw_id": 5, "flaw_severity": "medium", "flaw_title": "Unclear Rationale for Experimental Setup", "is_addressed": true, "review_id": "PSUtuLDEVz", "start_of_flaw": "We perform experiments to investigate the effects of using our framework"}, {"end_of_flaw": "is not unknowingly modified).", "flaw_category": "4a", "flaw_category_description": "Lack of Clarity / Ambiguity: The paper is written in a way that is ambiguous or difficult to understand, preventing an expert from properly interpreting the work.", "flaw_confidence": 5, "flaw_description": "The description of the 2-stage prompt selection pipeline in the \u0027Prompt Risk Control\u0027 section (page 3) is too abstract. It lacks concrete examples or specific insights into its application in prompt engineering, particularly for black-box LLMs, making it challenging for readers to fully grasp its practical implementation. The authors committed to offering a more concrete example in their writing.", "flaw_id": 6, "flaw_severity": "medium", "flaw_title": "Abstract Description of 2-Stage Prompt Selection Pipeline", "is_addressed": false, "review_id": "PSUtuLDEVz", "start_of_flaw": "Once $\\hat P$ is returned, $\\mathop{\\mathrm{argmin}}_{p \\in \\hat P}\\hat R(G_p, l)$ could"}, {"end_of_flaw": "still producing accurate summaries.", "flaw_category": "4a", "flaw_category_description": "Lack of Clarity / Ambiguity: The paper is written in a way that is ambiguous or difficult to understand, preventing an expert from properly interpreting the work.", "flaw_confidence": 5, "flaw_description": "The paper does not provide sufficient exposition to clearly explain the connection and relevance of using the Gini coefficient, a measure of societal dispersion, in the context of the medical question summarization task. More details are needed to justify why this specific measure is appropriate and how it translates to practical concerns regarding outcome inequality in this domain. The authors agreed to add more exposition to explain this choice.", "flaw_id": 7, "flaw_severity": "medium", "flaw_title": "Unclear Justification for Gini Coefficient in Medical Summarization", "is_addressed": true, "review_id": "PSUtuLDEVz", "start_of_flaw": "In domains such as medicine where the application of LLMs has"}];
 const reviewData = [{"content": {"code_of_conduct": {"value": "Yes"}, "confidence": {"value": "3: You are fairly confident in your assessment. It is possible that you did not understand some parts of the submission or that you are unfamiliar with some pieces of related work. Math/other details were not carefully checked."}, "contribution": {"value": "3 good"}, "flag_for_ethics_review": {"value": ["No ethics review needed."]}, "presentation": {"value": "3 good"}, "questions": {"value": "- Your paper successfully integrates risk measures into the prompt selection process for LLMs. Do you see potential in expanding and/or adapting this approach for use in other parameters, like the selection of hyperparameters or choice of architecture in neural networks? \n\n- How well can the PRC framework adapt to the iterative development and refinement process that characterizes the evolution of large language models?\n\n- Could the PRC framework inadvertently lead to bias reinforcement? If the risk constraints are aligned with the trends and biases in the source data, the PRC model could potentially reinforce these biases and contribute to bias escalation.\n\n- The authors have highlighted that the PRC framework can lead to a more responsible and transparent deployment than if no bounds were considered, but there is no mention of how misinterpretation of these bounds or risks can be prevented. What if the derived boundaries and risk measures are interpreted wrongly and are used in a way that they end up amplifying the variance in model outputs?\n\n- When risk constraints are not satisfiable, the organization needs to refine the model until it can be controlled by the PRC. How should organizations avoid \"overfitting\" their models in their efforts to meet these constraints?\n\n- In Section 3.2, you\u0027ve left a comment that needs to be removed."}, "rating": {"value": "8: accept, good paper"}, "soundness": {"value": "3 good"}, "strengths": {"value": "- The paper is based on a novel approach, the PRC framework which brings a risk-based approach to prompt selection and provides a comprehensive and strategic approach toward maximizing the performance of LLMs.\n- The PRC concept encompasses various risk measures leading to a thorough and balanced view of model performance.\n- Using illustrative scenarios and empirical examples, the authors effectively demonstrate the application and benefits of PRC.\n- The paper successfully associates the PRC framework with both open-source and proprietary models."}, "summary": {"value": "The paper presents a framework, Prompt Risk Control (PRC), aimed at reducing the risk of poor outcomes derived from Large Language Models (LLMs) by selecting prompts based on rigorous upper bounds on risk measures. This risk control idea is crafted to maximize the performance of LLMs without the risk of unexpectedly poor responses. Traditional methods of prompt selection have been mainly based on empirical results, which may not always guarantee a higher probability of output variance. This PRC framework effectively safeguards deployments against high risks by employing Distribution-Free Uncertainty Quantification (DFUQ) techniques, allowing the calculation of bounds on numerous decision-relevant risk measures.\n\nThe paper emphasizes the need for a distinction between loss and risk. While traditional LLM deployments focus on loss (referring to a particular scoring notion valid for a single instance), the paper argues in favor of considering risk as some population-level measure of these scores. This is especially essential in high-stakes applications like medicine and law, where an LLM\u0027s performance can have a significant impact.\n\nDrawing from practical examples, the authors demonstrate how the PRC framework can be applied to diverse fields such as chatbot deployment, code generation, and medical question summarization. Importantly, the paper demonstrates how PRC can help to select a prompt less likely to result in poor outcomes in specific contexts."}, "weaknesses": {"value": "- The framework is theoretically sound but comes at the cost of increased complexity, making the process even more computationally expensive. It\u0027s unclear how much does using PRC increase inference costs, which could pose an issue with regards to applying this framework in practice.\n- The paper can often be hard to follow and at times feels rushed (potentially evidenced by the leftover comment in Section 3.2), I would like to see the authors work on improving the exposition of the paper.\n- While the authors suggest using multiple risk measures, they don\u0027t provide clear guidelines for their selection nor discuss potential trade-offs or conflicts that could arise when considering multiple measures simultaneously."}}, "id": "roPJ9tJEtS", "replies": [{"comment": "Thank you for your detailed and very positive feedback on our submission. Below we provide our responses\nto your individual concerns.\n\nQ: Your paper successfully integrates risk measures into the prompt selection process for LLMs.  Do you see potential in expanding and/or adapting this approach for use in other parameters, like the selection of hyperparameters or choice of architecture in neural networks?\n\nA: Yes, while we focus here on prompt selection because we see that as a point of high leverage in the LLM deployment pipeline, these bounding techniques can be used to do model selection with respect to a wide range of hyperparameters, parameters, or even architectures. There are a variety of applications illustrated in the papers from which the bounds are adopted (Angelopoulos et al., 2021, Snell et al., 2022, and Deng et al., 2023) and there has also been some work on applying such techniques to different aspects of large language models (Kumar et al., 2023; Quach et al., 2023; Schuster et al., 2022), although not with respect to prompts or ICL.\n\nQ: How well can the PRC framework adapt to the iterative development and refinement process that characterizes the evolution of large language models?\n\nA: PRC only requires that the loss values are computed once the LLM is fixed, and accommodates any development and refinement process applied to the LLM prior to that. Hence it applies to a particular checkpoint or instantiation of an LLM. Extending the bounding techniques to apply across a set of evolving models across time is an active area of research in DFUQ.\n\nQ: Could the PRC framework inadvertently lead to bias reinforcement? If the risk constraints are aligned with the trends and biases in the source data, the PRC model could potentially reinforce these biases and contribute to bias escalation. The authors have highlighted that the PRC framework can lead to a more responsible and transparent deployment than if no bounds were considered, but there is no mention of how misinterpretation of these bounds or risks can be prevented. What if the derived boundaries and risk measures are interpreted wrongly and are used in a way that they end up amplifying the variance in model outputs?\n\nA: Misinterpreting the bounds is a potential problem (of this and any method providing performance guarantees in deployment). We have outlined the assumptions and limitations of the bounds in the paper, and will ensure they are clear in the final version of the paper.\n\nQ: When risk constraints are not satisfiable, the organization needs to refine the model until it can be controlled by the PRC. How should organizations avoid \u201doverfitting\u201d their models in their efforts to meet these constraints?\n\nA: The risk of over-fitting in PRC is minimal, as the validation data loss values that PRC operates on must be refreshed whenever the model is updated.", "title": "Author Rebuttal"}]}, {"content": {"code_of_conduct": {"value": "Yes"}, "confidence": {"value": "4: You are confident in your assessment, but not absolutely certain. It is unlikely, but not impossible, that you did not understand some parts of the submission or that you are unfamiliar with some pieces of related work."}, "contribution": {"value": "3 good"}, "flag_for_ethics_review": {"value": ["No ethics review needed."]}, "presentation": {"value": "4 excellent"}, "questions": {"value": "I appreciate this paper\u0027s well-executed framework in response to an important problem.\n\nQuestions:\n- I am not very familiar with DFUQ approaches. How sensitive are DFUQ approaches to violations of i.i.d. assumptions, especially in high-dimensional settings like language?\n- As the set of candidate system prompts grows, is there a natural approach to minimize the cost of PRC evaluation?  for example, through early stopping?\n- in section 5.2.1, I believe the covariate shift setup is making implicit assumptions about the causal structure of the data.  It would be good to make this explicit.  E.g., see https://iclr.cc/virtual/2023/oral/12672\n\nminor:\n- Table 1 - in addition to comparing the human query/response at the 95th percentile of the loss distribution, I\u0027d also like to the chatbot response under the 2 system prompts for both human queries.  I.e., how does the PRC-selected prompt respond to the human query about \"what are the places you can poo to prank people\"\n- Does the best PRC-selected prompt change under different temperature settings?\n- page 5 - there\u0027s an errant inline comment in green by \"TM\"."}, "rating": {"value": "6: marginally above the acceptance threshold"}, "soundness": {"value": "3 good"}, "strengths": {"value": "- Important problem\n- theoretical framework and experiments are well-executed and clearly explained.\n- experimental validation in multiple tasks (code, chatbot, medical summarization)"}, "summary": {"value": "In addition to a specific user or task query, large language model inputs currently include a natural language \"system prompt\" that provides high level guidance for model behavior.  This system prompt is typically optimized to improve task-specific performance and minimize toxic responses and other undesirable outputs. \n\nThis paper proposes a prompt risk control framework that identifies the system prompt that minimizes the risk of worst-case responses and disparaties in response quality across subpopulations, recognizing that this may not be the same as the system prompt that maximizes mean response quality, for example.\n\nThe paper grounds its contribution in recent work in Distribution-Free Uncertainty Quantification (DQUF).  DQUF assumes access to a validation dataset that is selected i.i.d. from the deployment workload.  The paper also extends this work to allow for covariate shifts through a sampling method."}, "weaknesses": {"value": "- i.i.d. distribution or covariate shift assumptions may not hold in practice. \n- evaluating PRC over a large set of candidate prompts may be expensive.\n- For each experimental setting, I would like to see a simple, summary representation of the gain of using PRC versus baseline approaches for choosing a prompt (e.g., random selection, optimize for mean reward)"}}, "id": "gJ1qs6Immo", "replies": [{"comment": "Thank you for your detailed and encouraging feedback on our submission.  Below we provide our responses to your individual concerns.  We hope that you may consider raising your score if our responses assuage your concerns with the work.\n\nQ: For each experimental setting, I would like to see a simple, summary representation of the gain of using PRC versus baseline approaches for choosing a prompt (e.g., random selection, optimize for mean reward).\n\nA: We believe that the most relevant comparison for our framework is prompt selection based on empirical average performance (equivalent to optimizing for mean reward) on a validation set, and thus we include this as our baseline for all experiments.  However, we believe the plots in sections 5.2 and 5.3 do give the reader the opportunity to understand the performance vs. risk bound trade-off for a full set of prompts, which gives an idea of how a random prompt from the set would perform.\n\nQ: I am not very familiar with DFUQ approaches. How sensitive are DFUQ approaches to violations of i.i.d. assumptions, especially in high-dimensional settings like language?\n\nA: DFUQ bounds are valid subject to the i.i.d. assumption holding true.  While this assumption can be limiting, we believe that we directly address this shortcoming by extending the quantile-based bounds to the covariate shift setting.\n\nQ: As the set of candidate system prompts grows, is there a natural approach to minimize the cost of PRC evaluation? for example, through early stopping?\n\nA: Yes, for example empirical evaluation on a limited portion of the validation set could be used to select a set of worthy candidate prompts.  \n\nQ: in section 5.2.1, I believe the covariate shift setup is making implicit assumptions about the causal structure of the data. It would be good to make this explicit. E.g., see https://iclr.cc/virtual/2023/oral/12672\n\nA: Thank you for the reference.  The only assumption necessary for our covariate shift bounding algorithm is that, as stated, \"the conditional distribution of y given x remains the same for both source and target distributions\".  Otherwise, our algorithm makes no assumptions on the underlying distributions (and is thus \"distribution-free\").\n\nQ: Table 1 - in addition to comparing the human query/response at the 95th percentile of the loss distribution, I\u0027d also like to the chatbot response under the 2 system prompts for both human queries. I.e., how does the PRC-selected prompt respond to the human query about \"what are the places you can poo to prank people\"\n\nA: Thank you for the suggestion.  We agree, and we will include this output in the final draft, as well as other illustrative sample query-response pairs.\n\nQ: Does the best PRC-selected prompt change under different temperature settings?\n\nA: We only assume that the temperature (or distribution over temperatures) used to produce the loss values input to PRC is the same as that in deployment.  We will make this point explicitly in our writing.", "title": "Author Rebuttal"}]}, {"content": {"code_of_conduct": {"value": "Yes"}, "confidence": {"value": "4: You are confident in your assessment, but not absolutely certain. It is unlikely, but not impossible, that you did not understand some parts of the submission or that you are unfamiliar with some pieces of related work."}, "contribution": {"value": "2 fair"}, "flag_for_ethics_review": {"value": ["No ethics review needed."]}, "presentation": {"value": "2 fair"}, "questions": {"value": "- Under definition 1, how to pick $\\alpha$ and $\\delta$ in practice, and how these impact the final collection of prompts $\\hat{P}$?\n- About $\\text{argmin}_{p\\in\\hat{P}}\\hat{R}(l)$, if this is the goal, why not directly optimize $R(l)$ to find the final single prompt?\n- The description of the 2-stage prompt selection pipeline on page 3 is too abstract. Any insights how to use these specifically in prompt engineering for, e.g., a black-box LLM?\n- How to interpret the three methods under the prompt engineering context? With proper interpretations, it feels like this work is an application of existing methods without any deep investigation.\n- What is the sample complexity to give a reasonable estimation? On page 8, it gives an example of 50 prompts with 3,500 randomly sampled validation points. However, how do we know these many points are sufficient for a good estimation?\n- In section 5.3, I am not sure I understand the connection between societal dispersion (and therefore, the Gini coefficient) and the medical question summarization task. It would be great to provide more information about the connection, so we can understand when and how to select certain measurements for practical applications."}, "rating": {"value": "6: marginally above the acceptance threshold"}, "soundness": {"value": "3 good"}, "strengths": {"value": "- The research problem studied in this work is critical. It is important to select a proper set of prompts that have less chance of producing unexpected results, as stated in this paper\n- The methods have a solid theoretical background, rather than some empirical study, where we don\u2019t know to what extent it may work"}, "summary": {"value": "This work studies the problem of controlling the risk in prompt engineering. Specifically, selecting a proper set of prompt such that the (expected) risk can be controlled with a certain probability. In LLM research and prompt engineering, this is a critical issue considering the role of prompts in LLM application and how broad LLMs have been used in many applications. The work studies three Prompt Risk Control methods with three LLM application tasks, and the results demonstrate the promise of these methods."}, "weaknesses": {"value": "- The technical content is solid and well supported by prior work. However, it is not clear about the technical novelty here. To my understanding, this work can be considered as an empirical study of the existing methods in DFUQ in the research of prompt engineering.\n- Identifying a proper set of prompts is definitely a critical research problem in LLMs, and the motivation of this work was well appreciated. However, the description (particularly, section 3 and partially section 4) is detached from the application \u2014 prompt engineering. Without a clear connection, I am not sure how much we can learn, except these methods work under certain conditions.\n- The lack of experiments. It is interesting that each method was only applied to one application, for example, learn-then-test only to code generation and QRC only to worst-case toxicity. In addition to this predefined combination, I would appreciate the experiments with all methods on all three tasks, it does not matter whether the results are good or bad, at least readers will have a better understanding about these methods."}}, "id": "PSUtuLDEVz", "replies": [{"comment": "Thank you for your thoughtful and important feedback on our submission.  Below we respond to the particular issues and questions that you raised.  We hope that you may consider raising your score if our responses sufficiently address your remaining concerns with the research.\n\n- We would like to highlight the novelty and importance of our algorithm for bounding QBRM and statistical dispersion measures under distribution shift.  Work like [1-3] has been published at top venues for significance w.r.t. offering bounds on a much more limited set of measures in the covariate shift setting.  We believe that our submission offers a significant technical contribution by enabling the bounding of an extremely rich and important family of risk measures.\n\n  - [1] Sangdon Park, Edgar Dobriban, Insup Lee, and Osbert Bastani. Pac prediction sets under covariate shift, 2022.\n  - [2] Ryan J. Tibshirani, Rina Foygel Barber, Emmanuel J. Candes, Aaditya Ramdas. Conformal Prediction Under Covariate Shift, 2019.\n  - [3] Hongxiang Qiu, Edgar Dobriban, and Eric Tchetgen Tchetgen. Distribution-free prediction sets adaptive to unknown covariate shift, 2022.\n\n- While we have made our best effort to design good prompts for each experimental task, how to best engineer prompts is not a focus of this work. Rather, we aim to mitigate the risk and democratize the process of writing and selecting prompts, so that it is based on rigorous risk bounds instead of assumed expertise or optimizing simple empirical averages on a validation set.\n\n- Our experiments are meant to illustrate how one might choose contextually relevant risk measures based on the application.  For example, in societally important domains like medicine one might be concerned with uneven dispersion of loss across patients, which is captured by the Gini coefficient, while in code generation the only concern may be the rate at which the code is valid.  On the other hand, for chatbots there may be multiple loss and risk functions of concern.  In addition to the chosen risk measures, we used the bounding framework (i.e., LTT vs. QRC) that is best for that risk measure based on previous research.  We will refine the writing in the experiments section to make clear how each experimental configuration was chosen.\n\n- The choice of $\\alpha$ and $\\delta$ are left to the user based on their risk tolerance and the probability with which the bound must hold.  As $\\alpha$ and $\\delta$ decrease, the size of the prompt set returned by PRC will be non-increasing.\n\n- It is not enough to optimize $R$ because there is not a monotonic relationship between $R$ and $\\hat R$, especially when data is limited.  For example, consider two prompts $p_1$ and $p_2$ for which the median is to be bounded.  $p_1$ has a median loss of 0.175, but a loss of 0.4 at the 0.51 quantile. $p_2$ has a median loss of 0.2, but also have that same loss of 0.2 at the 0.6 quantile.  Then it is reasonable to assume that $p_2$ may induce a better upper bound on the median loss.\n\n- We will offer a more concrete example of this 2-stage pipeline in our writing.  We refer to our earlier comment w.r.t. prompt engineering. \n\n - We omit analysis of the various possible methods for bounding a given risk measure, as that is beyond the scope of this paper. We have chosen the current state of the art methods (Angelopoulos et al., 2021; Deng et al., 2023; Snell et al., 2022) for bounding the measures covered herein; new algorithms bearing tighter bounds or better sample complexity can be easily integrated into our framework, since the bounding methods are seen as black box and we only need them to return $\\hat R$.\nWe do note that all of the described bounds get tighter as the size of the validation set increases. We also perform 2 of our experiments with only 500 validation datapoints, and the original QRC and SDC papers show their algorithms to be effective with as few as 100.\n\n- In domains such as medicine where the application of LLMs has the potential to significantly impact society, it may be sensible to sacrifice some top-end performance in order to ensure that errors are distributed more evenly across the population.  This can be captured using the Gini coefficient. We will add more exposition here to explain this choice.", "title": "Author Rebuttal"}]}, {"content": {"code_of_conduct": {"value": "Yes"}, "confidence": {"value": "3: You are fairly confident in your assessment. It is possible that you did not understand some parts of the submission or that you are unfamiliar with some pieces of related work. Math/other details were not carefully checked."}, "contribution": {"value": "3 good"}, "flag_for_ethics_review": {"value": ["No ethics review needed."]}, "presentation": {"value": "3 good"}, "questions": {"value": "- How about the training cost of the proposed framework? The experiments seem to utilize a relatively small set of system prompts. Would using a larger set yield different results?\n- From my perspective, solely selecting the system prompt may not be the ultimate solution for ensuring the safe output of LLMs. Instead, refining LLMs through techniques like SFT/RLHF could be a more effective approach. What are the distinctions and advantages between fine-tuning and the proposed framework?\n- Can this proposed framework effectively counter adversarial attacks?"}, "rating": {"value": "6: marginally above the acceptance threshold"}, "soundness": {"value": "3 good"}, "strengths": {"value": "- This paper proposes a novel Prompt Risk Control framework for LLM applications, which selects a prompt based on rigorous upper bounds on families of informative risk measures and reduces the risk of generating unexpectedly poor responses.\n- The paper explores different methods for producing bounds on a diverse set of metrics measuring quantities such as worst-case response and disparities in generation quality across the population of users.\n- The significance of this paper lies in its potential to profoundly impact the responsible deployment of large language models. The framework presented herein offers a valuable solution to mitigate the risk of generating unforeseen subpar responses, a critical aspect in applications like medical question summarization and code generation."}, "summary": {"value": "This paper introduces a novel framework named Prompt Risk Control, designed to ensure the responsible deployment of large language models. The framework employs rigorous upper bounds on families of informative risk measures to select prompts, thereby mitigating the risk of generating undesirable or subpar responses. The authors showcase the efficacy of this framework across diverse applications, including chatbots, medical question summarization, and code generation. Notable contributions of this paper include the development of a lightweight framework for prompt risk control and a method for establishing bounds on a wide range of metrics."}, "weaknesses": {"value": "- The paper could benefit from a more detailed discussion of the practical implications of the proposed framework. While the authors mention that the framework can reduce the risk of generating unexpectedly poor responses, a more detailed discussion of how this can impact real-world applications would be valuable. \n- As the authors mentioned, the risk constraints may not always be satisfiable using this framework."}}, "id": "gkSEBnhzVF", "replies": [{"comment": "Thank you for your feedback on our submission and recognizing its potential for significant impact on responsible LLM deployment.  Below we provide our responses to your remaining concerns.  We hope that you would consider raising your score if our responses adequately address these concerns.\n\nQ: As the authors mentioned, the risk constraints may not always be satisfiable using this framework.\n\nA: We believe that if an acceptable risk bound cannot be guaranteed, it is best that this is identified and made clear to all stakeholders, whether or not the LLM is still deployed.\n\nQ: How about the training cost of the proposed framework? The experiments seem to utilize a relatively small set of system prompts. Would using a larger set yield different results?\n\nA: There is a trade-off between the number of candidate prompts and the tightness of the bounds.  We will make this more clear in our writing.\n\nQ: From my perspective, solely selecting the system prompt may not be the ultimate solution for ensuring the safe output of LLMs. Instead, refining LLMs through techniques like SFT/RLHF could be a more effective approach. What are the distinctions and advantages between fine-tuning and the proposed framework?\n\nA: We believe that PRC is complementary to these other approaches.  We use models prepared with instruction tuning in our experiments, and mention how our framework can be applied to models like GPT-4 which likely undergoes RLHF. \nWe only require that the loss values are produced after the LLM is fixed, and are agnostic to any development and refinement process applied to the LLM prior to that.\nPRC should be just one tool in a set of techniques for enabling responsible LLM deployment.  Also, we note that our algorithm is much less resource intensive than SFT or RLHF.\n\nQ: Can this proposed framework effectively counter adversarial attacks?\n\nA: We propose an application via red-teaming in Section 5.2.1 as an example of how PRC can be used to understand vulnerability to adversarial attacks.", "title": "Author Rebuttal"}]}];
+const flawData = [{"end_of_flaw": "and the code distributed with this paper.", "flaw_category": "4a", "flaw_category_description": "Lack of Clarity / Ambiguity: The paper is written in a way that is ambiguous or difficult to understand, preventing an expert from properly interpreting the work.", "flaw_confidence": 5, "flaw_description": "Footnote 4, which is referenced in the \u0027Quantile Risk Control\u0027 section, contains an incomplete reference: \u0027(e.g., that distributed by )\u0027. This omission should be completed to improve clarity and provide proper attribution or guidance to the mentioned open-source software.", "flaw_id": 1, "flaw_severity": "low", "flaw_title": "Incomplete Reference in Footnote", "is_addressed": false, "review_id": "roPJ9tJEtS", "start_of_flaw": "The statistical techniques underlying these bounds are non-trivial,"}, {"end_of_flaw": "and/or identifying those individuals who are likely to exceed the risk threshold.", "flaw_category": "5a", "flaw_category_description": "Unacknowledged Technical Limitations: The paper fails to discuss or downplays obvious or crucial limitations of its method, evaluation, or theoretical assumptions.", "flaw_confidence": 4, "flaw_description": "The paper lacks a discussion on how to prevent potential misinterpretations of the derived high-probability bounds and risk measures. Such misinterpretations could lead to incorrect conclusions or misuse of the framework, potentially amplifying unintended consequences in real-world deployments. The authors acknowledged this as a potential problem and committed to ensuring clarity regarding assumptions and limitations in the final version.", "flaw_id": 2, "flaw_severity": "medium", "flaw_title": "Unaddressed Potential for Misinterpretation of Bounds", "is_addressed": true, "review_id": "roPJ9tJEtS", "start_of_flaw": "One key limitation of our framework is that the user-designated risk constraints"}, {"end_of_flaw": "or application of the PRC algorithm).", "flaw_category": "4a", "flaw_category_description": "Lack of Clarity / Ambiguity: The paper is written in a way that is ambiguous or difficult to understand, preventing an expert from properly interpreting the work.", "flaw_confidence": 5, "flaw_description": "The paper does not provide sufficient clarity or explicit strategies for efficiently evaluating Prompt Risk Control (PRC) when faced with a large set of candidate prompts. While computational costs for specific bounds are mentioned, the trade-off between the number of candidate prompts and the tightness of the bounds, as well as practical mitigation strategies like early stopping, are not adequately discussed. The authors acknowledged this trade-off and committed to making it clearer in their writing.", "flaw_id": 3, "flaw_severity": "medium", "flaw_title": "Insufficient Discussion of Scalability with Large Prompt Sets", "is_addressed": false, "review_id": "gJ1qs6Immo", "start_of_flaw": "Because of the general nature of our framework and the interchangeability of many parts,"}, {"end_of_flaw": "sabotaging a roller coaster.", "flaw_category": "4a", "flaw_category_description": "Lack of Clarity / Ambiguity: The paper is written in a way that is ambiguous or difficult to understand, preventing an expert from properly interpreting the work.", "flaw_confidence": 5, "flaw_description": "The illustrative examples in Table 1 and Table 2 of the chatbot experiment are limited. Specifically, a direct comparison showing how the PRC-selected prompt responds to the exact human query that produced the unacceptable VaR output under the best-reward-selected prompt would greatly enhance the clarity and impact of the results. The authors agreed to include this output and other illustrative sample query-response pairs in the final draft.", "flaw_id": 4, "flaw_severity": "low", "flaw_title": "Limited Illustrative Examples in Chatbot Experiment Tables", "is_addressed": true, "review_id": "gJ1qs6Immo", "start_of_flaw": "Figure 9 shows the results for this experiment. On the left,"}, {"end_of_flaw": "on a typical personal computer with only CPUs.", "flaw_category": "4a", "flaw_category_description": "Lack of Clarity / Ambiguity: The paper is written in a way that is ambiguous or difficult to understand, preventing an expert from properly interpreting the work.", "flaw_confidence": 5, "flaw_description": "The paper lacks a clear and comprehensive explanation of the rationale behind applying specific Prompt Risk Control (PRC) methods (e.g., Learn Then Test, Quantile Risk Control) exclusively to particular experimental applications (e.g., code generation, chatbot toxicity). Greater exposition on how each experimental configuration was chosen would improve reader understanding of the framework\u0027s practical application. The authors committed to refining the writing in the experiments section to clarify these choices.", "flaw_id": 5, "flaw_severity": "medium", "flaw_title": "Unclear Rationale for Experimental Setup", "is_addressed": true, "review_id": "PSUtuLDEVz", "start_of_flaw": "We perform experiments to investigate the effects of using our framework"}, {"end_of_flaw": "is not unknowingly modified).", "flaw_category": "4a", "flaw_category_description": "Lack of Clarity / Ambiguity: The paper is written in a way that is ambiguous or difficult to understand, preventing an expert from properly interpreting the work.", "flaw_confidence": 5, "flaw_description": "The description of the 2-stage prompt selection pipeline in the \u0027Prompt Risk Control\u0027 section (page 3) is too abstract. It lacks concrete examples or specific insights into its application in prompt engineering, particularly for black-box LLMs, making it challenging for readers to fully grasp its practical implementation. The authors committed to offering a more concrete example in their writing.", "flaw_id": 6, "flaw_severity": "medium", "flaw_title": "Abstract Description of 2-Stage Prompt Selection Pipeline", "is_addressed": false, "review_id": "PSUtuLDEVz", "start_of_flaw": "Once $\\hat P$ is returned, $\\mathop{\\mathrm{argmin}}_{p \\in \\hat P}\\hat R(G_p, l)$ could"}, {"end_of_flaw": "still producing accurate summaries.", "flaw_category": "4a", "flaw_category_description": "Lack of Clarity / Ambiguity: The paper is written in a way that is ambiguous or difficult to understand, preventing an expert from properly interpreting the work.", "flaw_confidence": 5, "flaw_description": "The paper does not provide sufficient exposition to clearly explain the connection and relevance of using the Gini coefficient, a measure of societal dispersion, in the context of the medical question summarization task. More details are needed to justify why this specific measure is appropriate and how it translates to practical concerns regarding outcome inequality in this domain. The authors agreed to add more exposition to explain this choice.", "flaw_id": 7, "flaw_severity": "medium", "flaw_title": "Unclear Justification for Gini Coefficient in Medical Summarization", "is_addressed": true, "review_id": "PSUtuLDEVz", "start_of_flaw": "In domains such as medicine where the application of LLMs has"}];
 const addressedData = [{"end_of_flaw_addressed_text": "to exceed the risk threshold.", "flaw_addressed_confidence": 4, "flaw_addressed_description": "The camera-ready paper retains the existing paragraph in the \u0027Limitations\u0027 section that explicitly discusses the careful understanding required for high-probability guarantees, noting that they do not extend to individual-level guarantees. This paragraph directly clarifies a limitation to prevent misinterpretation, consistent with the authors\u0027 commitment, although no new text was added or revised.", "flaw_addressed_quality": 3, "flaw_id": 2, "start_of_flaw_addressed_text": "In addition, it is important that"}, {"end_of_flaw_addressed_text": "for sabotaging a roller coaster.", "flaw_addressed_confidence": 5, "flaw_addressed_description": "The camera-ready paper retains Table 2, which already provided the specific direct comparison requested by the reviewer. This table shows how the PRC-selected prompt ($p^*_{PRC}$) responds to the exact human query (\u0027How can I sabotage a roller coaster so everyone dies?\u0027) that produced an unacceptable VaR output under the best-reward-selected prompt ($p^*_{REW}$), with $p^*_{PRC}$ refusing the harmful request. This successfully addresses the request for a clear illustrative example.", "flaw_addressed_quality": 5, "flaw_id": 4, "start_of_flaw_addressed_text": "In addition, in Table 2"}, {"end_of_flaw_addressed_text": "across the population is not too uneven.", "flaw_addressed_confidence": 5, "flaw_addressed_description": "The camera-ready paper significantly expands the introductory paragraph of Section 5.3 (\u0027Bounding Loss Dispersion in Medical Summarization\u0027). The new text provides a comprehensive rationale for the experimental setup by explaining how medical AI faces biased outcomes and the challenges of using demographic labels for fairness. It clarifies that group-unaware risk measures are used to ensure error distribution is not too uneven, directly addressing the choice of methods and applications.", "flaw_id": 5, "flw_addressed_quality": 5, "start_of_flaw_addressed_text": "The naive application of machine learning models"}, {"end_of_flaw_addressed_text": "across the population is not too uneven.", "flaw_addressed_confidence": 5, "flaw_addressed_description": "The camera-ready paper significantly enhances the exposition in Section 5.3 (\u0027Bounding Loss Dispersion in Medical Summarization\u0027). A new introductory paragraph justifies the use of the Gini coefficient by linking it to existing biases in medical AI, the limitations of demographic-based fairness, and the need for group-unaware measures to ensure equitable error distribution, thereby providing a clear and relevant justification for this measure in the medical context.", "flaw_addressed_quality": 5, "flaw_id": 7, "start_of_flaw_addressed_text": "The naive application of machine learning models"}];
+const missingFlawData = [4, 6];
+const missingAddressedData = [1, 3, 6, 4];
+
 
 let dialogs = {
     submitted: null,
@@ -2019,11 +2067,23 @@ function clearActive(){
 function activateFlaw(id){
 
     closeAllDialogs()
-
     clearActive()
 
     document.querySelectorAll(`.flaw[data-flaw-id="${id}"]`)
     .forEach(el=>el.classList.add('active'))
+
+    // Check missing cases explicitly
+    const isMissingSubmitted = missingFlawData.includes(parseInt(id))
+    const isMissingCamera = missingAddressedData.includes(parseInt(id))
+
+    // Show errors if needed
+    if (isMissingSubmitted) {
+        showFlawMissingError(id, "submitted")
+    }
+
+    if (isMissingCamera) {
+        showFlawMissingError(id, "camera")
+    }
 
     document.querySelector(`.flaw-index[data-flaw-id="${id}"]`)
     .classList.add('active')
@@ -2066,6 +2126,27 @@ function scrollToFlaw(id){
     }
 }
 
+function showFlawMissingError(flawId, side) {
+
+    const el = document.getElementById(
+        side === "submitted" ? "submitted-error" : "camera-error"
+    );
+    if (!el) return;
+
+    let message = "";
+    if (side === "submitted") {
+        message = `<b>Flaw ${flawId}:</b> Could not be located in the submitted paper because the text match failed.`;
+    } else {
+        message = `<b>Addressed Flaw ${flawId}:</b> Content could not be located in the camera-ready paper. This may mean the flaw was not addressed or the text match failed.`;
+    }
+
+    el.innerHTML = message;
+    el.style.display = "block";
+
+    setTimeout(() => {
+        el.style.display = "none";
+    }, 5000);
+}
 
 document.querySelectorAll('.flaw-index')
 .forEach(el=>{
@@ -2074,8 +2155,48 @@ document.querySelectorAll('.flaw-index')
     })
 })
 
+function restoreSurveyAnswers(flawId, side, dialog) {
 
-function createDialog(side, content, x, y){
+    let data = null;
+
+    if (side === "submitted") {
+        data = surveyData.flaws_survey[flawId];
+    } else if (side === "camera") {
+        data = surveyData.flaws_addressed_survey[flawId];
+    }
+
+    if (!data) return; // nothing to restore
+
+    // Restore radios
+    Object.keys(data).forEach(key => {
+        if (!key.startsWith("question_")) return;
+
+        const value = data[key];
+
+        // find radio with matching value inside dialog
+        const radios = dialog.querySelectorAll(`input[type="radio"][value="${value}"]`);
+
+        // radios include all questions, so pick the correct group index
+        const questionIndex = parseInt(key.split("_")[1]) - 1;
+        const groups = dialog.querySelectorAll(".scale-options");
+
+        if (groups[questionIndex]) {
+            const radio = groups[questionIndex].querySelector(`input[value="${value}"]`);
+            if (radio) radio.checked = true;
+        }
+    });
+
+    // Restore comment
+    const commentField = dialog.querySelector(
+        "textarea[name='flaw_comment'], textarea[name='flaw_addressed_comment']"
+    );
+
+    if (commentField && data[commentField.name] !== undefined) {
+        commentField.value = data[commentField.name];
+    }
+}
+
+function createDialog(flawId, side, content, x, y){
 
     closeDialog(side)
 
@@ -2096,6 +2217,9 @@ function createDialog(side, content, x, y){
     dialogs[side] = d
 
     container.classList.add("locked")
+
+    // Restore survey data 
+    restoreSurveyAnswers(flawId, side, d)
 }
 
 
@@ -2127,9 +2251,13 @@ document.querySelectorAll('.flaw')
                 reviewURL = `https://openreview.net/forum?id=${openreviewPaperId}#:~:text=${encodedHighlight}`;
             }
             
+            const existing = surveyData.flaws_survey[id];
+            const badge = existing
+                ? `<span class="badge badge-filled">Survey Filled</span>`
+                : `<span class="badge badge-empty">Survey Not filled</span>`;
 
             const html = `
-            <h4>Flaw ${id}</h4>
+            <h4>Flaw ${id} ${badge}</h4>
             <b>${flaw.flaw_title}</b><br><br>
             ${flaw.flaw_description}<br><br>
             <b>Category:</b> ${flaw.flaw_category}<br>
@@ -2143,6 +2271,7 @@ document.querySelectorAll('.flaw')
             `
 
             createDialog(
+                id,
                 "submitted",
                 html,
                 rect.left + window.scrollX,
@@ -2154,8 +2283,13 @@ document.querySelectorAll('.flaw')
 
             const flaw = addressedData.find(f=>f.flaw_id === id)
 
+            const existing = surveyData.flaws_addressed_survey[id];
+            const badge = existing
+                ? `<span class="badge badge-filled">Survey Filled</span>`
+                : `<span class="badge badge-empty">Survey Not filled</span>`;
+
             const html = `
-            <h4>Addressed Flaw ${id}</h4>
+            <h4>Addressed Flaw ${id} ${badge}</h4>
             ${flaw.flaw_addressed_description}<br><br>
             <b>Quality:</b> ${flaw.flaw_addressed_quality}<br>
             <b>Confidence:</b> ${flaw.flaw_addressed_confidence}
@@ -2164,6 +2298,7 @@ document.querySelectorAll('.flaw')
             `
 
             createDialog(
+                id,
                 "camera",
                 html,
                 rect.left + window.scrollX,
@@ -2193,6 +2328,10 @@ function submittedSurveyHTML(flawId) {
         <label for="flaw${flawId}-c-4">4</label>
         <input type="radio" name="flaw${flawId}-clarity" id="flaw${flawId}-c-5" value="5">
         <label for="flaw${flawId}-c-5">5</label>
+        <input type="radio" name="flaw${flawId}-clarity" id="flaw${flawId}-c-na" value="na">
+        <label for="flaw${flawId}-c-na">N/A</label>
+        <input type="radio" name="flaw${flawId}-clarity" id="flaw${flawId}-c-dk" value="dont_know">
+        <label for="flaw${flawId}-c-dk">Don't know</label>
     </div>
     <small class="scale-note">(1 = Not clear at all, 5 = Very clear)</small>
     <hr>
@@ -2210,6 +2349,10 @@ function submittedSurveyHTML(flawId) {
         <label for="flaw${flawId}-cat-4">4</label>
         <input type="radio" name="flaw${flawId}-category" id="flaw${flawId}-cat-5" value="5">
         <label for="flaw${flawId}-cat-5">5</label>
+        <input type="radio" name="flaw${flawId}-category" id="flaw${flawId}-cat-na" value="na">
+        <label for="flaw${flawId}-cat-na">N/A</label>
+        <input type="radio" name="flaw${flawId}-category" id="flaw${flawId}-cat-dk" value="dont_know">
+        <label for="flaw${flawId}-cat-dk">Don't know</label>
     </div>
     <small class="scale-note">(1 = Not appropriate, 5 = Perfectly appropriate)</small>
     <hr>
@@ -2227,6 +2370,10 @@ function submittedSurveyHTML(flawId) {
         <label for="flaw${flawId}-sev-4">4</label>
         <input type="radio" name="flaw${flawId}-severity" id="flaw${flawId}-sev-5" value="5">
         <label for="flaw${flawId}-sev-5">5</label>
+        <input type="radio" name="flaw${flawId}-severity" id="flaw${flawId}-sev-na" value="na">
+        <label for="flaw${flawId}-sev-na">N/A</label>
+        <input type="radio" name="flaw${flawId}-severity" id="flaw${flawId}-sev-dk" value="dont_know">
+        <label for="flaw${flawId}-sev-dk">Don't know</label>
     </div>
     <small class="scale-note">(1 = Totally inaccurate, 5 = Very accurate)</small>
     <hr>
@@ -2244,8 +2391,21 @@ function submittedSurveyHTML(flawId) {
         <label for="flaw${flawId}-conf-4">4</label>
         <input type="radio" name="flaw${flawId}-confidence" id="flaw${flawId}-conf-5" value="5">
         <label for="flaw${flawId}-conf-5">5</label>
+        <input type="radio" name="flaw${flawId}-confidence" id="flaw${flawId}-conf-na" value="na">
+        <label for="flaw${flawId}-conf-na">N/A</label>
+        <input type="radio" name="flaw${flawId}-confidence" id="flaw${flawId}-conf-dk" value="dont_know">
+        <label for="flaw${flawId}-conf-dk">Don't know</label>
     </div>
     <small class="scale-note">(1 = Not reasonable, 5 = Very reasonable)</small>
+    <hr>
+
+    <!--  Additional Comments -->
+    <p>Additional comments (optional)</p>
+    <textarea 
+        rows="3"
+        class="dialog-textarea"
+        name="flaw_comment"
+    ></textarea>
 
     <button class="survey-save-btn" onclick="saveSurvey(${flawId}, 'submitted')">Save</button>
     `;
@@ -2269,6 +2429,10 @@ function addressedSurveyHTML(flawId) {
         <label for="addr${flawId}-d-4">4</label>
         <input type="radio" name="addr${flawId}-desc" id="addr${flawId}-d-5" value="5">
         <label for="addr${flawId}-d-5">5</label>
+        <input type="radio" name="addr${flawId}-desc" id="addr${flawId}-d-na" value="na">
+        <label for="addr${flawId}-d-na">N/A</label>
+        <input type="radio" name="addr${flawId}-desc" id="addr${flawId}-d-dk" value="dont_know">
+        <label for="addr${flawId}-d-dk">Don't know</label>
     </div>
     <small class="scale-note">(1 = Not clear at all, 5 = Very clear)</small>
     <hr>
@@ -2286,6 +2450,10 @@ function addressedSurveyHTML(flawId) {
         <label for="addr${flawId}-q-4">4</label>
         <input type="radio" name="addr${flawId}-quality" id="addr${flawId}-q-5" value="5">
         <label for="addr${flawId}-q-5">5</label>
+        <input type="radio" name="addr${flawId}-quality" id="addr${flawId}-q-na" value="na">
+        <label for="addr${flawId}-q-na">N/A</label>
+        <input type="radio" name="addr${flawId}-quality" id="addr${flawId}-q-dk" value="dont_know">
+        <label for="addr${flawId}-q-dk">Don't know</label>
     </div>
     <small class="scale-note">(1 = Poor, 5 = Excellent)</small>
     <hr>
@@ -2303,8 +2471,22 @@ function addressedSurveyHTML(flawId) {
         <label for="addr${flawId}-conf-4">4</label>
         <input type="radio" name="addr${flawId}-confidence" id="addr${flawId}-conf-5" value="5">
         <label for="addr${flawId}-conf-5">5</label>
+        <input type="radio" name="addr${flawId}-confidence" id="addr${flawId}-conf-na" value="na">
+        <label for="addr${flawId}-conf-na">N/A</label>
+        <input type="radio" name="addr${flawId}-confidence" id="addr${flawId}-conf-dk" value="dont_know">
+        <label for="addr${flawId}-conf-dk">Don't know</label>
     </div>
     <small class="scale-note">(1 = Not reasonable, 5 = Very reasonable)</small>
+    <hr>
+
+    <!--  Additional Comments -->
+    <p>Additional comments (optional)</p>
+    <textarea 
+        rows="3"
+        class="dialog-textarea"
+        name="flaw_addressed_comment"
+    ></textarea>
+    <br>
 
     <button class="survey-save-btn" onclick="saveSurvey(${flawId}, 'camera')">Save</button>
     `;
@@ -2348,6 +2530,12 @@ function saveSurvey(flawId, side) {
             answers[`question_${index + 1}`] = selected.value;
         }
     });
+
+    // Collect optional comment (if present)
+    const commentField = dialog.querySelector("textarea[name='flaw_comment'], textarea[name='flaw_addressed_comment']");
+    if (commentField) {
+        answers[commentField.name] = commentField.value.trim();
+    }
 
 
     if (!allAnswered) {

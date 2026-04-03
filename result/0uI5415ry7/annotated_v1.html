@@ -175,7 +175,7 @@ body{
     background:white;
     border:1px solid #ccc;
     padding:16px;
-    width:360px;
+    width:400px;
     box-shadow:0 2px 12px rgba(0,0,0,0.25);
     z-index:2000;
 }
@@ -203,6 +203,15 @@ body{
     margin-bottom:18px;
     border:none;
     border-top:1px solid #ddd;
+}
+
+.dialog-textarea{
+    width:100%;
+    padding:6px 8px;
+    border:1px solid #ccc;
+    border-radius:4px;
+    font-size:14px;
+    box-sizing:border-box;
 }
 
 .scale-options {
@@ -389,6 +398,37 @@ body{
     box-shadow: 0 6px 16px rgba(0,0,0,0.25);
 }
 
+/* Badge for dilaog: filled/unfilled */
+.badge {
+    margin-left:8px;
+    padding:2px 8px;
+    font-size:12px;
+    border-radius:999px;
+    font-weight:400;
+}
+
+.badge-filled {
+    background:#16a34a;
+    color:white;
+}
+
+.badge-empty {
+    background:#e5e7eb;
+    color:#374151;
+}
+
+/* Flaw Errors */
+.flaw-error-box {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: #ffede6;
+    border: 1px solid #f0a08c;
+    border-left: 6px solid #e03400;
+    border-radius: 6px;
+    font-size: 16px;
+    color: #374151;
+}
+
 </style>
 </head>
 
@@ -486,6 +526,10 @@ Flaw Navigation
 
 </div>
 
+<!-- Error containers -->
+<div id="submitted-error" class="flaw-error-box" style="display:none;"></div>
+<div id="camera-error" class="flaw-error-box" style="display:none;"></div>
+
 </div>
 
 </div>
@@ -509,7 +553,7 @@ Submitted Paper
 <p>Transformer architectures  (henceforth, referred to as <em>transformers</em>) have shown impressive performance in various applications . However, training transformers is notoriously difficult and laborious; see, e.g., observations given by as well as scaling laws . In particular, training transformers requires carefully designed optimizers as well as use of various heuristics. For instance, as illustrated in <a href="#fig:motivation" data-reference-type="ref+label" data-reference="fig:motivation">1</a>, stochastic gradient descent (SGD)—the workhorse of most deep learning optimization problems—fails to train transformers effectively. This failure is in contrast to the success of SGD when applied to train convolutional neural networks (CNNs) on vision tasks.</p>
 <p>Several recent papers propose a number of different explanations as to why transformer optimization is so difficult. There is a general consensus in the literature that the loss landscape of transformers has a number of distinctive features that significantly differ from standard optimization theory assumptions. Most notably, it is empirically verified through various experiments that stochastic gradient noise is heavy-tailed and non-Gaussian  and the loss landscape is significantly ill-conditioned . In particular, standard assumptions are incapable of dealing with and explaining these observations, and as a result, transformer optimization has become more of an art than science.</p>
 <p>A major obstacle in understanding transformer optimization is that full-fledged transformers are extremely complicated to model. One can probe the transformer’s properties by measuring quantities, such as gradient norm or smoothness, but it is much harder to parse the inner-layer workings, and to satisfactorily answer questions such as: <em>why</em> does the loss landscape have such features, or <em>how</em> do algorithms like Adam perform better than SGD in transformer training?</p>
-<p>For these reasons, having an appropriate <em>mathematical abstraction</em> is necessary for progress in understanding transformer optimization — an abstraction that is as simple as possible, while still able to capture the essence of transformer optimization. <span class="flaw " data-flaw-id="1" data-side="submitted">The main message of this paper is that these distinctive features of transformer training also arise in a far simpler setting: we propose that the <em>linear attention model</em> is precisely the abstraction that we are looking for. We verify that training this model on a low-dimensional linear regression task displays all the distinctive features that have been observed on the full transformer, suggesting that our surprisingly simple model can serve as a testbed for rigorous understanding of transformer optimization.</p>
+<p>For these reasons, having an appropriate <em>mathematical abstraction</em> is necessary for progress in understanding transformer optimization — an abstraction that is as simple as possible, while still able to capture the essence of transformer optimization. <span class="flaw" data-flaw-id="1" data-side="submitted">The main message of this paper is that these distinctive features of transformer training also arise in a far simpler setting: we propose that the <em>linear attention model</em> is precisely the abstraction that we are looking for. We verify that training this model on a low-dimensional linear regression task displays all the distinctive features that have been observed on the full transformer, suggesting that our surprisingly simple model can serve as a testbed for rigorous understanding of transformer optimization.</p>
 <h4>Main contributions.</h4>
 <p>We summarize our main contributions as follows:</p>
 <ul>
@@ -652,7 +696,7 @@ This is in stark contrast with the training of other neural networks (e.g., conv
 <p><strong>Bounded stochastic gradient noise.</strong> In most SGD analyses, it is assumed that the stochastic gradient $<code>g(x)</code>$ satisfies the <em>bounded variance</em> property: $<code>\mathbb{E}g(x)-\nabla f(x)^2 \leq \sigma^2</code>$.</p>
 </li>
 </ul>
-<p><span class="flaw " data-flaw-id="10" data-side="submitted">The features defined above are typically of great importance in the theory of convex optimization, as the convergence rate of gradient-based optimizers (e.g., gradient descent) typically depends on these quantities. For instance, the convergence rate of gradient descent gets better as the Lipschitzness or smoothness constant gets smaller, or the condition number gets smaller . Building on these concepts, we now discuss the previous studies on transformer optimization.</span> Several recent works have connected the difficulties of training transformers to the unconventional features arising from the loss landscape of transformer optimization.</p>
+<p><span class="flaw" data-flaw-id="10" data-side="submitted">The features defined above are typically of great importance in the theory of convex optimization, as the convergence rate of gradient-based optimizers (e.g., gradient descent) typically depends on these quantities. For instance, the convergence rate of gradient descent gets better as the Lipschitzness or smoothness constant gets smaller, or the condition number gets smaller . Building on these concepts, we now discuss the previous studies on transformer optimization.</span> Several recent works have connected the difficulties of training transformers to the unconventional features arising from the loss landscape of transformer optimization.</p>
 <h2>Heavy-tailed gradient noise</h2>
 <p>In (entitled <em>Why are adaptive methods good for attention models?</em>), it was observed that the stochastic gradient is typically more heavy-tailed for transformer optimization than other neural network optimization. In particular, they make a case that this is opposed to the standard bounded variance condition for SGD analysis – see <a href="#fig:histogram" data-reference-type="ref+label" data-reference="fig:histogram">[fig:histogram]</a> and <a href="#fig:histogram_more" data-reference-type="ref+label" data-reference="fig:histogram_more">3</a>. They posit that this phenomenon might be one of the main reasons behind the phenomenon <a href="#adam" data-reference-type="eqref" data-reference="adam">[adam]</a>; they also theoretically show that adaptive step sizes in the form of gradient clipping is required for convergence.</p>
 <figure id="fig:histogram_more">
@@ -685,7 +729,7 @@ and define the directional smoothness as . In particular, based on the above cal
 <p>In this section, we show that a simple yet canonical transformer model exhibits all the features in <a href="#sec:features" data-reference-type="ref+label" data-reference="sec:features">2</a>. Specifically, the optimization problem to be solved is the training of <strong>linear transformers on random instances of linear regression</strong>, a model recently proposed for understanding of in-context learning .</p>
 <h2>Linear transformer on linear regression</h2>
 <h4>Data distribution.</h4>
-<p><span class="flaw " data-flaw-id="9" data-side="submitted">The data distribution can be thought of as the random instances of linear regression. Concretely, let $<code>X \in \mathbb{R}^{(n+1)\times d}</code>$ be the matrix of covariates of the regression whose row $<code>i</code>$ contains tokens $<code>{i} \in \mathbb{R}^d</code>$ drawn i.i.d. from a distribution $<code>D_{\mathcal{X}}</code>$. We then draw $<code>w_\star\sim D_{\mathcal{W}}</code>$ and then generate the scalar responses $<code>y = [ \langle1, w_\star\rangle,\dots,  \langle n,w_\star\rangle] \in \mathbb{R}^n</code>$. Now the input of the data set consists of these linear regression examples:
+<p><span class="flaw" data-flaw-id="9" data-side="submitted">The data distribution can be thought of as the random instances of linear regression. Concretely, let $<code>X \in \mathbb{R}^{(n+1)\times d}</code>$ be the matrix of covariates of the regression whose row $<code>i</code>$ contains tokens $<code>{i} \in \mathbb{R}^d</code>$ drawn i.i.d. from a distribution $<code>D_{\mathcal{X}}</code>$. We then draw $<code>w_\star\sim D_{\mathcal{W}}</code>$ and then generate the scalar responses $<code>y = [ \langle1, w_\star\rangle,\dots,  \langle n,w_\star\rangle] \in \mathbb{R}^n</code>$. Now the input of the data set consists of these linear regression examples:
 <code>math
 \begin{aligned}
 \label{exp:input}
@@ -721,7 +765,7 @@ Then we define $<code>{\sf TF}_L (Z_0; \{P_\ell,Q_\ell\}_{\ell=0}^{L-1})  = -[Z_
 <figcaption><span class="math inline">log (loss)</span> against iteration. Comparison between linear attention and softmax attention for the 3-layer transformers. Note that the loss of linear transformer decreases much faster.</figcaption>
 </figure>
 
-<p><span class="flaw " data-flaw-id="4" data-side="submitted">We emphasize here that the linear attention unit, defined in <a href="#eq:linear" data-reference-type="eqref" data-reference="eq:linear">[eq:linear]</a>, differs from the standard attention unit in  in two ways: we use a single matrix $<code>Q</code>$ to represent the product of key, query matrices, and more importantly, <em>we remove the softmax activation outside $<code>Z^\top Q Z</code>$</em>. There are two key reasons for our choice:</p>
+<p><span class="flaw" data-flaw-id="4" data-side="submitted">We emphasize here that the linear attention unit, defined in <a href="#eq:linear" data-reference-type="eqref" data-reference="eq:linear">[eq:linear]</a>, differs from the standard attention unit in  in two ways: we use a single matrix $<code>Q</code>$ to represent the product of key, query matrices, and more importantly, <em>we remove the softmax activation outside $<code>Z^\top Q Z</code>$</em>. There are two key reasons for our choice:</p>
 <ol>
 <li>
 <p>The linear attention unit is <em>much better suited to the task of linear regression.</em> For instance, demonstrates that the performance of softmax transformer with twice many heads matches that of linear transformers; in other words, we need two softmax attention heads to recover the performance of a single linear head. In <a href="#fig:softmax" data-reference-type="ref+label" data-reference="fig:softmax">4</a>, we show that linear attention performs significantly better than standard attention with softmax.</p>
@@ -784,7 +828,7 @@ Then we define $<code>{\sf TF}_L (Z_0; \{P_\ell,Q_\ell\}_{\ell=0}^{L-1})  = -[Z_
 
 <p>In order to understand the effect of context length, we also consider the setting when context length $<code>n=5</code>$ instead; this is Setting 2 of <a href="#table:setting" data-reference-type="ref+label" data-reference="table:setting">1</a>.</p>
 <p>Finally, to investigate the effect of heavy-tailed covariates on various aspects of the loss landscape, we consider Setting 3 in <a href="#table:setting" data-reference-type="ref+label" data-reference="table:setting">1</a>, where we draw each $<code>x_i</code>$ instead uniformly from the unit sphere, and then scale it by the square root of a heavy-tailed Gamma random variable with shape parameter $<code>k=0.1</code>$ and scale parameter $<code>\theta=10</code>$. Furthermore, in <a href="#sec:data_dist" data-reference-type="ref+label" data-reference="sec:data_dist">4.1</a>, we study the effect of heavy-tailedness of the covariates in more detail.</p>
-<p><span class="flaw " data-flaw-id="8" data-side="submitted">For each different setting, we pick the best learning rate from a grid search over $<code>10</code>$ different choices. We choose the momentum parameter $<code>0.9</code>$ for SGD, and $<code>\beta_1=\beta_2=0.9</code>$ for Adam. We also employ the (global) gradient clipping where the thresholds are chosen to be $<code>1</code>$ for all settings (i.e., the clipped gradient direction is the same as the non-clipped direction). All the experiments are run over $<code>6</code>$ different random seeds. See Figures <a href="#fig:sgdadam" data-reference-type="ref" data-reference="fig:sgdadam">[fig:sgdadam]</a>, <a href="#fig:histogram" data-reference-type="ref" data-reference="fig:histogram">[fig:histogram]</a>, <a href="#table:robust" data-reference-type="ref" data-reference="table:robust">[table:robust]</a>, <a href="#fig:dir_smoothness_vs_iter" data-reference-type="ref" data-reference="fig:dir_smoothness_vs_iter">2</a>, and <a href="#fig:smoothness" data-reference-type="ref" data-reference="fig:smoothness">6</a> for the results.</span></p>
+<p><span class="flaw" data-flaw-id="8" data-side="submitted">For each different setting, we pick the best learning rate from a grid search over $<code>10</code>$ different choices. We choose the momentum parameter $<code>0.9</code>$ for SGD, and $<code>\beta_1=\beta_2=0.9</code>$ for Adam. We also employ the (global) gradient clipping where the thresholds are chosen to be $<code>1</code>$ for all settings (i.e., the clipped gradient direction is the same as the non-clipped direction). All the experiments are run over $<code>6</code>$ different random seeds. See Figures <a href="#fig:sgdadam" data-reference-type="ref" data-reference="fig:sgdadam">[fig:sgdadam]</a>, <a href="#fig:histogram" data-reference-type="ref" data-reference="fig:histogram">[fig:histogram]</a>, <a href="#table:robust" data-reference-type="ref" data-reference="table:robust">[table:robust]</a>, <a href="#fig:dir_smoothness_vs_iter" data-reference-type="ref" data-reference="fig:dir_smoothness_vs_iter">2</a>, and <a href="#fig:smoothness" data-reference-type="ref" data-reference="fig:smoothness">6</a> for the results.</span></p>
 <p><strong>Discussion of results.</strong> Below we provide detailed discussion of the results.</p>
 <ol>
 <li>
@@ -1024,7 +1068,7 @@ Camera Ready Paper
 <p>We leverage the simplicity of our model to look deeper into how these features arise, by changing settings (e.g., data distribution, the number of layers). Our results reveal that the unique features from previous work get more pronounced in our linear Transformer setting when the data distribution becomes more heavy-tailed, or the number of layers increases.</p>
 </li>
 </ul>
-<p><span class="flaw " data-flaw-id="1" data-side="camera"><span class="flaw " data-flaw-id="6" data-side="camera">We expect that such a simple abstraction has great value not only for theoretical research but also for development of optimization methods for Transformers. However, these directions are out-of-scope of this work, and left for future work. As a preliminary, we first survey the previous works that seek to characterize and understand the Transformer optimization landscape.</span></span></p>
+<p><span class="flaw" data-flaw-id="1" data-side="camera"><span class="flaw" data-flaw-id="6" data-side="camera">We expect that such a simple abstraction has great value not only for theoretical research but also for development of optimization methods for Transformers. However, these directions are out-of-scope of this work, and left for future work. As a preliminary, we first survey the previous works that seek to characterize and understand the Transformer optimization landscape.</span></span></p>
 <h1>Distinctive features of Transformer optimization</h1>
 <p>Numerous recent papers have identified a number of distinctive features of the Transformer optimization problem, which set it apart from commonly studied optimization objectives, or even other neural networks such as CNNs. As shown in <a href="#fig:motivation" data-reference-type="ref+label" data-reference="fig:motivation">1</a>, one of the most striking features is the following:
 <code>math
@@ -1161,7 +1205,7 @@ This is in stark contrast with the training of other neural networks (e.g., conv
 <p>In (entitled <em>Why are adaptive methods good for attention models?</em>), it was observed that the stochastic gradient is typically more heavy-tailed for Transformer optimization than other neural network optimization. In particular, they make a case that this is opposed to the standard bounded variance condition for SGD analysis – see <a href="#fig:histogram" data-reference-type="ref+label" data-reference="fig:histogram">[fig:histogram]</a> and <a href="#fig:histogram_more" data-reference-type="ref+label" data-reference="fig:histogram_more">3</a>. They posit that this phenomenon might be one of the main reasons behind the phenomenon <a href="#adam" data-reference-type="eqref" data-reference="adam">[adam]</a>; they also theoretically show that adaptive step sizes in the form of gradient clipping is required for convergence.</p>
 <figure id="fig:histogram_more">
 <img src="./figures/histogram_full.png"" style="width:80.0%" />
-<figcaption> <span><strong><span class="flaw " data-flaw-id="3" data-side="camera">The heavy-tail stochastic gradient noise for Transformers.</strong></span> Under the same setting as <a href="#fig:motivation" data-reference-type="ref+label" data-reference="fig:motivation">1</a>, <span class="citation" data-cites="kunstner2023noise"></span> plot the stochastic gradient noise at the initialization. The top-right corner of each plot is the quantile-quantile (q-q) plot between the histogram (<span class="math inline"><em>y</em></span>-axis) and its best fit Gaussian (<span class="math inline"><em>x</em></span>-axis). Notice that the stochastic gradient noise for the convolutional neural networks on vision tasks (MNIST, CIFAR-10) is much less heavy-tailed than the Transformers on NLP tasks. We will revisit this plot in <a href="#fig:histogram_2" data-reference-type="ref+label" data-reference="fig:histogram_2">[fig:histogram_2]</a>.</span> </figcaption>
+<figcaption> <span><strong><span class="flaw" data-flaw-id="3" data-side="camera">The heavy-tail stochastic gradient noise for Transformers.</strong></span> Under the same setting as <a href="#fig:motivation" data-reference-type="ref+label" data-reference="fig:motivation">1</a>, <span class="citation" data-cites="kunstner2023noise"></span> plot the stochastic gradient noise at the initialization. The top-right corner of each plot is the quantile-quantile (q-q) plot between the histogram (<span class="math inline"><em>y</em></span>-axis) and its best fit Gaussian (<span class="math inline"><em>x</em></span>-axis). Notice that the stochastic gradient noise for the convolutional neural networks on vision tasks (MNIST, CIFAR-10) is much less heavy-tailed than the Transformers on NLP tasks. We will revisit this plot in <a href="#fig:histogram_2" data-reference-type="ref+label" data-reference="fig:histogram_2">[fig:histogram_2]</a>.</span> </figcaption>
 </figure>
 
 <p>A noteworthy follow-up work by reveal that the heavy-tailed stochastic noise may not explain the full picture. In particular, they compare the full-batch versions (hence no stochastic noise), and notice the phenomenon <a href="#adam" data-reference-type="eqref" data-reference="adam">[adam]</a> still hold. Since there is no stochastic noise in this setting, the explanation based on heavy-tailed noise does not apply here.</p>
@@ -1188,7 +1232,7 @@ and define the directional smoothness as . In particular, based on the above cal
 <h1>Linear shallow Transformers have the same loss landscape as practical deep Transformers</h1>
 <p>In this section, we show that a simple yet canonical Transformer model exhibits all the features in <a href="#sec:features" data-reference-type="ref+label" data-reference="sec:features">2</a>. Specifically, the optimization problem to be solved is the training of <strong>linear Transformers on random instances of linear regression</strong>, a model recently proposed for understanding of in-context learning .</p>
 <h2>Linear Transformer on linear regression</h2>
-<p><strong>Data distribution.</strong> <span class="flaw " data-flaw-id="9" data-side="camera">The data distribution can be thought of as the random instances of linear regression. Concretely, for $<code>i=1,2\dots, n+1</code>$, let $<code>x^{(i)} \in \mathbb{R}^d</code>$ be drawn <em>i.i.d.</em> from a distribution $<code>D_{\mathcal{X}}</code>$. We then draw $<code>w_\star\sim D_{\mathcal{W}}</code>$ and then generate the scalar responses $<code>y = [ \langle x^{(1)}, w_\star\rangle,\dots,  \langle x^{(n)},w_\star\rangle] \in \mathbb{R}^n</code>$. Now the input of the data set consists of these linear regression examples:</span>
+<p><strong>Data distribution.</strong> <span class="flaw" data-flaw-id="9" data-side="camera">The data distribution can be thought of as the random instances of linear regression. Concretely, for $<code>i=1,2\dots, n+1</code>$, let $<code>x^{(i)} \in \mathbb{R}^d</code>$ be drawn <em>i.i.d.</em> from a distribution $<code>D_{\mathcal{X}}</code>$. We then draw $<code>w_\star\sim D_{\mathcal{W}}</code>$ and then generate the scalar responses $<code>y = [ \langle x^{(1)}, w_\star\rangle,\dots,  \langle x^{(n)},w_\star\rangle] \in \mathbb{R}^n</code>$. Now the input of the data set consists of these linear regression examples:</span>
 <code>math
 \begin{aligned}
 \label{exp:input}
@@ -1225,7 +1269,7 @@ Then we define $<code>{\sf TF}_L (Z_0; \{P_\ell,Q_\ell\}_{\ell=0}^{L-1})  = -[Z_
 <p>We emphasize here that the linear attention unit, defined in <a href="#eq:linear" data-reference-type="eqref" data-reference="eq:linear">[eq:linear]</a>, differs from the standard attention unit in : our architecture does not have feedforward networks, and we use a single matrix $<code>Q</code>$ to represent the product of key, query matrices. More importantly, <em>we remove the softmax activation outside $<code>Z^\top Q Z</code>$</em>. There are two key reasons for our choice:</p>
 <p>1. The linear attention unit is <em>much better suited to the task of linear regression.</em> For instance, demonstrates that the performance of softmax Transformer with twice many heads matches that of linear Transformers; in other words, we need two softmax attention heads to recover the performance of a single linear head. In <a href="#fig:softmax" data-reference-type="ref+label" data-reference="fig:softmax">4</a>, we show that linear attention performs significantly better than standard attention with softmax.</p>
 <p>2. Our goal in this paper is to <em>find the simplest abstraction</em> which is representative of the Transformer’s optimization landscape. As we will see in <a href="#sec:linear_features" data-reference-type="ref+label" data-reference="sec:linear_features">3.2</a>, the loss landscape of the linear Transformer well approximates that of the actual Transformer, even without the softmax activation, feedforward networks, and other components of standard Transformers.</p>
-<p><span class="flaw " data-flaw-id="4" data-side="camera"><span class="flaw " data-flaw-id="5" data-side="camera">We also note that the key-query matrix is parametrized by a single matrix $<code>Q</code>$, which is another difference relative to standard Transformers. We make such a parametrization for simplicity, and in the left plot of <a href="#fig:diff_Nd" data-reference-type="ref+label" data-reference="fig:diff_Nd">5</a>, we verify that the loss plot for the standard parametrization is largely similar to ours.</span> We also remark that the lack of softmax may result in different learned attention scores. In particular, it may lead to denser attention scores than the attention scores for softmax Transformers . On the other hand, the sparsity of learned attention scores depends on the data distribution; for instance, we observe that orthogonal covariates (as in ) lead to sparser attention scores for both linear and softmax Transformers.</span></p>
+<p><span class="flaw" data-flaw-id="4" data-side="camera"><span class="flaw" data-flaw-id="5" data-side="camera">We also note that the key-query matrix is parametrized by a single matrix $<code>Q</code>$, which is another difference relative to standard Transformers. We make such a parametrization for simplicity, and in the left plot of <a href="#fig:diff_Nd" data-reference-type="ref+label" data-reference="fig:diff_Nd">5</a>, we verify that the loss plot for the standard parametrization is largely similar to ours.</span> We also remark that the lack of softmax may result in different learned attention scores. In particular, it may lead to denser attention scores than the attention scores for softmax Transformers . On the other hand, the sparsity of learned attention scores depends on the data distribution; for instance, we observe that orthogonal covariates (as in ) lead to sparser attention scores for both linear and softmax Transformers.</span></p>
 <h2>Linear Transformers as a fruitful abstraction</h2>
 <div class="center">
 
@@ -1564,10 +1608,14 @@ let surveyData = {
     flaws_survey: {},          // key: flawId, value: survey answers
     flaws_addressed_survey: {} // key: flawId, value: survey answers
 };
+
 const openreviewPaperId = "0uI5415ry7";
-const flawData = [{"end_of_flaw": "training methods for transformers.", "flaw_category": "2b", "flaw_category_description": "Missing or Incomplete Theoretical Foundation: The paper requires but lacks a formal theoretical justification for its method (e.g., no convergence guarantees, no formal proof).", "flaw_confidence": 5, "flaw_description": "The paper primarily presents empirical findings and proposes a simplified model as a testbed. However, it lacks a formal theoretical justification or deeper mathematical analysis for the observed phenomena in the linear transformer setting, which the authors themselves acknowledge as a direction for future work rather than a current contribution.", "flaw_id": 1, "flaw_severity": "medium", "flaw_title": "Missing Theoretical Foundation", "is_addressed": true, "review_id": "HKu0Jpj3O5", "start_of_flaw": "The main message of this paper is"}, {"end_of_flaw": "of in-context learning .", "flaw_category": "1b", "flaw_category_description": "Weak or Limited Scope of Experiments: The experiments are too narrow to support the paper\u0027s general claims (e.g., \"toy\" problems, insufficient data, no real-world testing).", "flaw_confidence": 5, "flaw_description": "The empirical evaluation is primarily focused on linear regression tasks, which, while suitable for linear transformers, limits the generalizability of the conclusions to the broader context of \u0027transformer optimization\u0027, especially for practical language modeling tasks. Although additional non-linear experiments were added, the authors acknowledged this limitation.", "flaw_id": 2, "flaw_severity": "medium", "flaw_title": "Limited Scope of Empirical Evaluation to Linear Regression", "is_addressed": true, "review_id": "HKu0Jpj3O5", "start_of_flaw": "Specifically, the optimization problem to be"}, {"end_of_flaw": "noise phenomenon.", "flaw_category": "1d", "flaw_category_description": "Flawed Evaluation Metrics or Setup: The metrics used are inappropriate or misleading, or the experimental setup is unreliable.", "flaw_confidence": 5, "flaw_description": "The initial assessment of heavy-tailed stochastic gradient noise relied heavily on visual inspection of histograms, which is insufficient for rigorous comparison. The authors acknowledged this and improved the analysis by adding quantile-quantile (QQ) plots to provide a more quantitative comparison of noise distributions.", "flaw_id": 3, "flaw_severity": "medium", "flaw_title": "Insufficient Quantitative Analysis of Gradient Noise Distribution", "is_addressed": true, "review_id": "cr6PdyUnzk", "start_of_flaw": "In (right), following , we plot"}, {"end_of_flaw": "without the softmax activation.", "flaw_category": "4a", "flaw_category_description": "Lack of Clarity / Ambiguity: The paper is written in a way that is ambiguous or difficult to understand, preventing an expert from properly interpreting the work.", "flaw_confidence": 5, "flaw_description": "The paper initially lacked a comparative discussion on how attention weights behave in linear transformers versus standard (softmax) transformers, particularly regarding sparsity or concentration. The authors acknowledged this and added a discussion in the revision.", "flaw_id": 4, "flaw_severity": "low", "flaw_title": "Lack of Discussion on Softmax vs. Linear Attention Behavior", "is_addressed": true, "review_id": "HKu0Jpj3O5", "start_of_flaw": "We emphasize here that the linear attention"}, {"end_of_flaw": "where .", "flaw_category": "1c", "flaw_category_description": "Lack of Necessary Ablation or Analysis: The paper fails to analyze why its method works, missing ablation studies, cost/scalability analysis, or parameter sensitivity checks.", "flaw_confidence": 5, "flaw_description": "The paper simplified the attention mechanism by using a single matrix \u0027Q\u0027 instead of the standard \u0027WQ WK\u0027 parameterization. It initially lacked an explicit comparison or ablation study to show that this simplification does not qualitatively alter the observed optimization characteristics, which was later addressed by adding an experiment.", "flaw_id": 5, "flaw_severity": "medium", "flaw_title": "Missing Ablation for Attention Parameterization", "is_addressed": true, "review_id": "cr6PdyUnzk", "start_of_flaw": "Given matrices , we define the linear"}, {"end_of_flaw": "understanding of transformer optimization.", "flaw_category": "4a", "flaw_category_description": "Lack of Clarity / Ambiguity: The paper is written in a way that is ambiguous or difficult to understand, preventing an expert from properly interpreting the work.", "flaw_confidence": 5, "flaw_description": "The initial presentation of the work\u0027s scope was not explicitly clear about what specific aspects of transformer optimization the simplified model aimed to cover or what phenomena it intentionally excluded. The authors acknowledged the need for clarification and refined the introduction.", "flaw_id": 6, "flaw_severity": "low", "flaw_title": "Unclear Delimitation of Research Scope", "is_addressed": true, "review_id": "cr6PdyUnzk", "start_of_flaw": "For these reasons, having an appropriate mathematical"}, {"end_of_flaw": "by theoretical considerations.", "flaw_category": "4a", "flaw_category_description": "Lack of Clarity / Ambiguity: The paper is written in a way that is ambiguous or difficult to understand, preventing an expert from properly interpreting the work.", "flaw_confidence": 5, "flaw_description": "The description of the linear transformer architecture did not explicitly state the absence of Feed Forward Networks (FFNs), which are a standard component in vanilla transformers. This omission could lead to ambiguity for readers expecting a clearer architectural comparison. The authors corrected this by explicitly mentioning it.", "flaw_id": 7, "flaw_severity": "low", "flaw_title": "Unspecified Omission of Feed Forward Networks (FFN)", "is_addressed": true, "review_id": "QQAc62zhnn", "start_of_flaw": "Finally, for a positive integer , we define"}, {"end_of_flaw": "for the results.", "flaw_category": "4b", "flaw_category_description": "Missing Implementation or Methodological Details: The paper omits crucial details needed for reproduction (e.g., key hyperparameters, data processing steps, source code).", "flaw_confidence": 5, "flaw_description": "The paper initially lacked a concise summary of detailed training recipes and hyperparameters, making it challenging for others to reproduce the experimental results. The authors addressed this by adding a summary of hyperparameters in an appendix and providing the code.", "flaw_id": 8, "flaw_severity": "medium", "flow_title": "Missing Hyperparameter Details for Reproducibility", "is_addressed": true, "review_id": "QQAc62zhnn", "start_of_flaw": "For each different setting, we pick the"}, {"end_of_flaw": "as we detail below.", "flaw_category": "4a", "flaw_category_description": "Lack of Clarity / Ambiguity: The paper is written in a way that is ambiguous or difficult to understand, preventing an expert from properly interpreting the work.", "flaw_confidence": 5, "flaw_description": "The paper contained inconsistencies in notation (e.g., whether covariates were row or column vectors) and typos in matrix dimensions within the description of the data distribution and input matrix formulation in Section 3.1. These errors caused confusion and reduced clarity, which the authors corrected.", "flaw_id": 9, "flaw_severity": "low", "flaw_title": "Inconsistent Notation and Dimensionality Typos", "is_addressed": true, "review_id": "QQAc62zhnn", "start_of_flaw": "The data distribution can be thought of"}, {"end_of_flaw": "transformer optimization.", "flaw_category": "4a", "flaw_category_description": "Lack of Clarity / Ambiguity: The paper is written in a way that is ambiguous or difficult to understand, preventing an expert from properly interpreting the work.", "flaw_confidence": 5, "flaw_description": "The paper contained minor grammatical issues, such as the use of \u0027features\u0027 instead of \u0027concepts\u0027 in Section 2.1, and inconsistent capitalization of \u0027Transformers\u0027 throughout the manuscript. These small errors detracted from the overall polish and clarity, and were corrected by the authors.", "flaw_id": 10, "flaw_severity": "low", "flaw_title": "Minor Presentation and Grammatical Inconsistencies", "is_addressed": true, "review_id": "QQAc62zhnn", "start_of_flaw": "The features defined above are typically of great"}];
 const reviewData = [{"content": {"code_of_conduct": {"value": "Yes"}, "confidence": {"value": "4: You are confident in your assessment, but not absolutely certain. It is unlikely, but not impossible, that you did not understand some parts of the submission or that you are unfamiliar with some pieces of related work."}, "contribution": {"value": "3 good"}, "flag_for_ethics_review": {"value": ["No ethics review needed."]}, "presentation": {"value": "3 good"}, "questions": {"value": "1. One conclusion may not be obvious for linear Transformers compared with softmax Transformers. That is, the attention weights are more concentrated (even sparsely) on some key features/tokens after training, which is observed in several existing works [Li et al., 2023a, Li et al., 2023b, Oymak et al., 2023] for softmax Transformers. Can the authors provide a comparison empirically on this? Also, I think it is better to cover such a discussion in the revision.\n\nOymak et al., 2023, \"On the Role of Attention in Prompt-tuning. \"\nLi et al., 2023a, \"A Theoretical Understanding of Shallow Vision Transformers: Learning, Generalization, and Sample Complexity.\"\nLi et al., 2023b, \"How do transformers learn topic structure: Towards a mechanistic understanding.\""}, "rating": {"value": "6: marginally above the acceptance threshold"}, "soundness": {"value": "3 good"}, "strengths": {"value": "This work is novel in terms of new experiments on linear transformers from many aspects of evaluation. The paper is well-written and clear to follow. The studied problem is interesting to the community, from my understanding. The designed experiments are concise to support the conclusion."}, "summary": {"value": "This paper studies the property of the shallow linear Transformer model. The evaluated phenomenon includes comparing Adam and SGD, heavy-tailed gradient noise, condition number, smoothness, etc. The experimental results show that the linear Transformer model reproduces the phenomena that have been observed for full Transformers. The results also show that more heavy-tailed data distribution and more layers can enhance the conclusion.\n\n--------------------------------------------------------\n\n**After rebuttal**: Thank you for your response. I am sorry for the late reply. I am satisfied with the feedback and revisions. I will keep my rating as 6 and support you. A minor point and suggestion: Please clarify what the four figures in Fig. 15 are to be compared within the main body. Later, I realize you are mentioning some figures on page 3. It is not a big issue anyway."}, "weaknesses": {"value": "1. This work lacks theoretical understanding or explanation after the experiments in Section 3.2, 4.1, 4.2. \n2. The limitation is not discussed. One thing that should be emphasized in the introduction or the abstract is that the experiments are linear regression, which is a good fit for linear Transformers."}}, "id": "HKu0Jpj3O5", "replies": [{"comment": "Thank you for appreciating the values of our work and your constructive comments! \n\n\nAdmittedly, we do not provide theoretical understanding of the phenomenon, but what we claim as our main contribution is the discovery of a simple abstract setting where the key characteristics of Transformer optimization persists, and we believe that our findings could serve as a useful testbed for the future theoretical investigations.\n\nIn order to address your concern regarding the limitation, we conducted an additional set of experiments for a nonlinear regression. In particular, we consider the case where the covariates $x^{(i)}$ are distorted by a ReLU network $MLP$, i.e., the responses are generated as $y^{(i)} = \\langle w_\\star , MLP(x^{(i)}) \\rangle$. In order to cope with the nonlinearity we also added a MLP in our Transformer architecture.\nAs you can see from **Appendix B**, the results for the nonlinear regression are largely similar to the linear regression. We hope that our additional set of experiments addresses some of your concern.\n\nMoreover, thank you for point us to the additional relevant works regarding the softmax Transformers. Although it\u0027s not directly related to the main message of our paper, we answer your question regarding the attention scores as below. As a summary, for the linear Transformer for linear regression, we need to combine appropriate covariates $x^{(i)}$, $i=1,2,...,n$ to figure out the missing prediction $y^{(n+1)}$ for $x^{(n+1)}$. So, the sparsity of the attention weights will depend on instances. For instance, when the covariates $x^{(i)}$ are orthogonal, we empirically observe that the attention scores are sparse both for linear and softmax Transformers, which is consistent with the results from the previous papers. As per your suggestion, we added a discussion regarding the softmax Transformer on **Page 6**.", "title": "Response"}]}, {"content": {"code_of_conduct": {"value": "Yes"}, "confidence": {"value": "3: You are fairly confident in your assessment. It is possible that you did not understand some parts of the submission or that you are unfamiliar with some pieces of related work. Math/other details were not carefully checked."}, "contribution": {"value": "3 good"}, "flag_for_ethics_review": {"value": ["No ethics review needed."]}, "presentation": {"value": "3 good"}, "questions": {"value": "- What are some phenomena that are not able to be captured in this simplified setup?\n    - e.g. using the $Q$ parameterization rather than $W_Q^\\top W_K$ might lead to different implicit regularization effects.\n    - There might be effects about architectural choices, e.g. consequences and limitations from the softmax.\n    - In general, it would be helpful to better clarify what is consider in-scope and what is not.\n- Could you give some examples of new discovery or actionable advice from the simple setup?\n- The current setup is entirely linear; if the data is non-linear, would there be similar optimization characteristics?"}, "rating": {"value": "6: marginally above the acceptance threshold"}, "soundness": {"value": "3 good"}, "strengths": {"value": "- The simple setup is able to reproduce several characteristics of the training dynamics, which are not captured by canonical optimization theory. These include heavy-tailed gradient noise, robust condition number (larger for SGD than for Adam), as well as better directional and generalized smoothness from Adam.\n- The synthetic setup allows for more precise control.\n    - The paper varies the number of layers, data distribution, and context length.\n    - It\u0027s affordable to grid search over 10 learning rates."}, "summary": {"value": "This paper identifies \"use shallow linear Transformers for regression task\" as a simple setup that serves as an effective mathematical abstraction for studying Transformer optimization.\n- The linear Transformer has attention (inner product) and residual connection, without softmax and MLP. For attention, a single $Q$ matrix is used to replace the product $W_Q^\\top W_K$.\n- The aim is to find the _simplest_ setup as a surrogate for studying optimization: this paper uses a 3-layer network with 5-dim covariate, on the linear regression task."}, "weaknesses": {"value": "- The main claim is that the simplified setup can be used as a proxy for larger scale systems. However, some connections are drawn by having \"qualitatively similar\" results.\n  - For example it\u0027s known that higher-order moments of the gradient noises matter, which cannot be captured by examining plots visually.\n  - e.g. How to judge whether the noises are similar based on Fig 3, or that 8-layer is qualitatively similar to 3-layer based on Fig 8?\n- The current empirical results are for confirming existing findings, but it\u0027s unclear what new discoveries can be enabled by this simplified setup."}}, "id": "cr6PdyUnzk", "replies": [{"comment": "Thank you for your constructive comments. We agree with your comment that our simple setting lets us do more precise controlled experiments. \n\nLet us address your points one by one. We revised our paper based on your comments and all the edits are highlighted in orange.\n\n-- **More quantitative way of checking noise distribution?** Following [Kunstner et al., 2023], we added the quantile-quantile plot (QQ-plot) in our revision. A QQ-plot is a plot of the quantiles of two distributions against each other. In particular, we add QQ-plots that compare the quantiles of the stochastic gradient noise (y-axis) against those of its best-fit Gaussian distribution. One can see that QQ-plots go beyond $y=x$ line toward the right, suggesting that the stochastic noises are indeed heavy-tailed. Also, for the heavy-tailed covariates experiments and the more layers experiments, we now can also see clearly for which cases the noises become more heavy-tailed.\n\n-- **Regarding the $W_Q W_K$ parametrization.** Thank you for your question. In the left plot of Figure 8, we added a result for the standard Transformer parameterization of $W_Q W_K$, and observed that the result looks similar to our simplified parameterization. \n\n-- **Regarding softmax activation.** We mostly considered linear Transformer since it\u0027s better suited for the task of solving linear regression in-context as shown in Figure 7. \n\n-- **Clarifying the scope of this work** As per your suggestion, we further clarified the main scope of this work in our introduction, by saying \"....development of efficient optimization methods for Transformers. However, such directions are out-of-scope of this work, and left for future work.\"\n\n-- **Our setting entirely linear?** We would like to clarify that despite removal of nonlinearity, the linear Transformer is still highly nonlinear function due to the attention mechanism. In particular, even the output of single layer linear Transformer is a multivariate 3rd order polynomial function of the input.\n\n**[Updated Response]**: In order to address your concerns about the linearity in the data distribution, in our newest revision, we conducted an additional set of experiments for the nonlinear regression, and it\u0027s presented in **Appendix B**.", "title": "Thank you for your comments!"}]}, {"content": {"code_of_conduct": {"value": "Yes"}, "confidence": {"value": "3: You are fairly confident in your assessment. It is possible that you did not understand some parts of the submission or that you are unfamiliar with some pieces of related work. Math/other details were not carefully checked."}, "contribution": {"value": "3 good"}, "flag_for_ethics_review": {"value": ["No ethics review needed."]}, "presentation": {"value": "3 good"}, "questions": {"value": "- Are there other possible tasks that can be expressed by linear transformers? Do those tasks on simple linear transformers also exhibit those behaviors?\n- If we add other linearities (such as softmax) to the shallow neural networks, can you also show those properties along the training trajectory?"}, "rating": {"value": "8: accept, good paper"}, "soundness": {"value": "3 good"}, "strengths": {"value": "The presented work is overall clear and of notable quality. Its innovative aspect is the unexpected empirical evidence indicating that, under certain conditions, shallow linear transformers can closely resemble conventional attention models, revealing a significant similarity between the simple model and its real-world analogs. \n\nGiven the historical challenges associated with analyzing attention mechanisms involving softmax or other nonlinearities, it is commendable to identify such marked resemblances under broad observations using a simplified framework. This study illuminates the theoretical analysis for optimization on linear transformers, which makes a valuable contribution to the literature."}, "summary": {"value": "This paper offers empirical evidence highlighting parallels between shallow linearized transformer models and the dynamics observed during practical Transformer training. These properties span various well-known aspects: the superiority of adaptive methods over SGD, the presence of heavy-tailed stochastic gradient noise, a robust condition number characterizing the optimization landscape, and the directional smoothness gap. The findings advocate for the potential of simple linear transformers as an insightful and accessible model to elucidate the mystery of Transformer optimization trajectories."}, "weaknesses": {"value": "The paper is somewhat limited in its data distribution and optimization objective setting to support its conclusion. The data distribution discussed in this setting focuses on in-context linear regression tasks\u2014a largely statistical setting, rather than one that closely resembles language. This might be attributed to the limited expressivity of linear transformers. \n\nI fully understand that the authors are trying to *find the simplest abstraction* as a representative of the transformer\u2019s landscape. However, since the landscape is likely heavily dependent on the data distribution, it would be more convincing to see a variety of data models that exhibit the same phenomenon in simple models. Furthermore, it\u0027s difficult to assert that the linearized model is sufficient to understand Transformer optimization, especially since the properties verified in this paper represent only a portion of the optimization narrative."}}, "id": "S42L4mY7tb", "replies": [{"comment": "Thank you for appreciating the values of our work and constructive comments! We also believe that having a simplified framework is valuable for the future rigorous study on Transformer optimization.\n\nWe also appreciate your comment \"**I fully understand that the authors are trying to find the simplest abstraction as a representative of the transformer\u2019s landscape.**\"\nThat is precisely the main scope of this work.\n\n\nTo address your comments about \"the landscape being likely dependent on the data distribution,\" in **Appendix B**, we conducted an additional set of experiments for a nonlinear regression. In particular, we consider the case where the covariates $x^{(i)}$ are distorted by a ReLU network $MLP$, i.e., the responses are generated as $y^{(i)} = \\langle w_\\star , MLP(x^{(i)}) \\rangle$. In order to cope with the nonlinearity we also added a MLP in our Transformer architecture.\nAs you can see from **Appendix B**, the results for the nonlinear regression are largely similar to the linear regression. Although we agree that nonlinear regression also can\u0027t fully explain the practical language modeling, we hope that our additional set of experiments addresses your concern.", "title": "Response"}]}, {"content": {"code_of_conduct": {"value": "Yes"}, "confidence": {"value": "4: You are confident in your assessment, but not absolutely certain. It is unlikely, but not impossible, that you did not understand some parts of the submission or that you are unfamiliar with some pieces of related work."}, "contribution": {"value": "3 good"}, "flag_for_ethics_review": {"value": ["No ethics review needed."]}, "presentation": {"value": "3 good"}, "questions": {"value": "The question here is just for clarification.\n\n- What is the box in the upper right of the left 3 plots in Fig. 3?"}, "rating": {"value": "6: marginally above the acceptance threshold"}, "soundness": {"value": "3 good"}, "strengths": {"value": "- The paper is well-written and easy to follow.\n- Sec. 2 offers a concise and informative overview of existing study on Transformers\u0027 optimization. It\u0027s helpful for readers to digest the context of this study.\n- The empirical study and comparisons look solid and convincing. I\u0027m looking forward to optimization theories based on the proposed simplified model."}, "summary": {"value": "This paper aims at deriving a simplified model for theoretical study of Transformers\u0027 optimization. The authors study a pure-attention without softmax Transformer variant (which is called linear attention) on a synthetic regression task. By conducting extensive empirical study, the authors claim that the proposed linear attention Transformer exhibits similar optimization properties that have been observed in the training of vanilla Transformers. Thus, this paper concludes that the proposed linear attention Transformer can be a realistic proxy for understanding Transformer optimization."}, "weaknesses": {"value": "- The proposed simplified model does not have feed forward network (FFN), which is yet another difference from standard Transformers. The authors should explicitly point this out (e.g., in the introduction and the formulation of model architecture) in the paper.\n\n- I strongly recommend the authors to summarize the detailed training recipes (e.g., hyperparameters) in a table and release the code for calculating relevant quantities (e.g., gradient error, robust condition numbers) to facilitate reproducibility and follow-up research.\n\n- In the beginning of Sec. 3.1, $x^{(i)}$ is defined as a row vector. But in the input matrix it seems that one has to interpret $x^{(i)}$ as a column matrix. Moreover, the matrix shape here is very confusing. The input of $F$ is $(n+1)\\times (d+1)$, while $Z_0$ is $(d+1)\\times (n+1)$. I suggest following the \"_Attention Is All You Need_\" paper and using shape $(n+1)\\times (d+1)$ consistently. The authors should fix the notation and formulas here.\n\n**Minor issues.** \n\n- Sec. 2.1: _The features defined above are typically of ..._ $\\to$ _The concepts defined above are typically of ..._\n\n- I recommend the authors to capitalize the first letter of \"Transformers\"."}}, "id": "QQAc62zhnn", "replies": [{"comment": "Thank you for your fruitful comments! We revised our paper based on your comments and all the edits are highlighted in orange.\n\n- We added in our revision that \"our setting doesn\u0027t have FFN\" in the places that you suggested.\n\n- For the dimensions in the beginning of Section 3.1, those were typos. Thank you for catching them. We now corrected them. \n\n- We also corrected the \"minor issues\" raised by you; we also capitalize \"Transformers\" throughout the manuscript.\n\n- For the upper right box in  Fig. 3 are the quantile-quantile plots (QQ-plots) to see how heavy-tailed the distributions are. We added the QQ plots for our experiments as well as descriptions in our paper.\n\n- We added the summary of hyperparameter choice in Appendix A. Also, we attached the code in the supplementary material.", "title": "Thank you for your comments!"}]}];
+const flawData = [{"end_of_flaw": "training methods for transformers.", "flaw_category": "2b", "flaw_category_description": "Missing or Incomplete Theoretical Foundation: The paper requires but lacks a formal theoretical justification for its method (e.g., no convergence guarantees, no formal proof).", "flaw_confidence": 5, "flaw_description": "The paper primarily presents empirical findings and proposes a simplified model as a testbed. However, it lacks a formal theoretical justification or deeper mathematical analysis for the observed phenomena in the linear transformer setting, which the authors themselves acknowledge as a direction for future work rather than a current contribution.", "flaw_id": 1, "flaw_severity": "medium", "flaw_title": "Missing Theoretical Foundation", "is_addressed": true, "review_id": "HKu0Jpj3O5", "start_of_flaw": "The main message of this paper is"}, {"end_of_flaw": "of in-context learning .", "flaw_category": "1b", "flaw_category_description": "Weak or Limited Scope of Experiments: The experiments are too narrow to support the paper\u0027s general claims (e.g., \"toy\" problems, insufficient data, no real-world testing).", "flaw_confidence": 5, "flaw_description": "The empirical evaluation is primarily focused on linear regression tasks, which, while suitable for linear transformers, limits the generalizability of the conclusions to the broader context of \u0027transformer optimization\u0027, especially for practical language modeling tasks. Although additional non-linear experiments were added, the authors acknowledged this limitation.", "flaw_id": 2, "flaw_severity": "medium", "flaw_title": "Limited Scope of Empirical Evaluation to Linear Regression", "is_addressed": true, "review_id": "HKu0Jpj3O5", "start_of_flaw": "Specifically, the optimization problem to be"}, {"end_of_flaw": "noise phenomenon.", "flaw_category": "1d", "flaw_category_description": "Flawed Evaluation Metrics or Setup: The metrics used are inappropriate or misleading, or the experimental setup is unreliable.", "flaw_confidence": 5, "flaw_description": "The initial assessment of heavy-tailed stochastic gradient noise relied heavily on visual inspection of histograms, which is insufficient for rigorous comparison. The authors acknowledged this and improved the analysis by adding quantile-quantile (QQ) plots to provide a more quantitative comparison of noise distributions.", "flaw_id": 3, "flaw_severity": "medium", "flaw_title": "Insufficient Quantitative Analysis of Gradient Noise Distribution", "is_addressed": true, "review_id": "cr6PdyUnzk", "start_of_flaw": "In (right), following , we plot"}, {"end_of_flaw": "without the softmax activation.", "flaw_category": "4a", "flaw_category_description": "Lack of Clarity / Ambiguity: The paper is written in a way that is ambiguous or difficult to understand, preventing an expert from properly interpreting the work.", "flaw_confidence": 5, "flaw_description": "The paper initially lacked a comparative discussion on how attention weights behave in linear transformers versus standard (softmax) transformers, particularly regarding sparsity or concentration. The authors acknowledged this and added a discussion in the revision.", "flaw_id": 4, "flaw_severity": "low", "flaw_title": "Lack of Discussion on Softmax vs. Linear Attention Behavior", "is_addressed": true, "review_id": "HKu0Jpj3O5", "start_of_flaw": "We emphasize here that the linear attention"}, {"end_of_flaw": "where .", "flaw_category": "1c", "flaw_category_description": "Lack of Necessary Ablation or Analysis: The paper fails to analyze why its method works, missing ablation studies, cost/scalability analysis, or parameter sensitivity checks.", "flaw_confidence": 5, "flaw_description": "The paper simplified the attention mechanism by using a single matrix \u0027Q\u0027 instead of the standard \u0027WQ WK\u0027 parameterization. It initially lacked an explicit comparison or ablation study to show that this simplification does not qualitatively alter the observed optimization characteristics, which was later addressed by adding an experiment.", "flaw_id": 5, "flaw_severity": "medium", "flaw_title": "Missing Ablation for Attention Parameterization", "is_addressed": true, "review_id": "cr6PdyUnzk", "start_of_flaw": "Given matrices , we define the linear"}, {"end_of_flaw": "understanding of transformer optimization.", "flaw_category": "4a", "flaw_category_description": "Lack of Clarity / Ambiguity: The paper is written in a way that is ambiguous or difficult to understand, preventing an expert from properly interpreting the work.", "flaw_confidence": 5, "flaw_description": "The initial presentation of the work\u0027s scope was not explicitly clear about what specific aspects of transformer optimization the simplified model aimed to cover or what phenomena it intentionally excluded. The authors acknowledged the need for clarification and refined the introduction.", "flaw_id": 6, "flaw_severity": "low", "flaw_title": "Unclear Delimitation of Research Scope", "is_addressed": true, "review_id": "cr6PdyUnzk", "start_of_flaw": "For these reasons, having an appropriate mathematical"}, {"end_of_flaw": "by theoretical considerations.", "flaw_category": "4a", "flaw_category_description": "Lack of Clarity / Ambiguity: The paper is written in a way that is ambiguous or difficult to understand, preventing an expert from properly interpreting the work.", "flaw_confidence": 5, "flaw_description": "The description of the linear transformer architecture did not explicitly state the absence of Feed Forward Networks (FFNs), which are a standard component in vanilla transformers. This omission could lead to ambiguity for readers expecting a clearer architectural comparison. The authors corrected this by explicitly mentioning it.", "flaw_id": 7, "flaw_severity": "low", "flaw_title": "Unspecified Omission of Feed Forward Networks (FFN)", "is_addressed": true, "review_id": "QQAc62zhnn", "start_of_flaw": "Finally, for a positive integer , we define"}, {"end_of_flaw": "for the results.", "flaw_category": "4b", "flaw_category_description": "Missing Implementation or Methodological Details: The paper omits crucial details needed for reproduction (e.g., key hyperparameters, data processing steps, source code).", "flaw_confidence": 5, "flaw_description": "The paper initially lacked a concise summary of detailed training recipes and hyperparameters, making it challenging for others to reproduce the experimental results. The authors addressed this by adding a summary of hyperparameters in an appendix and providing the code.", "flaw_id": 8, "flaw_severity": "medium", "flow_title": "Missing Hyperparameter Details for Reproducibility", "is_addressed": true, "review_id": "QQAc62zhnn", "start_of_flaw": "For each different setting, we pick the"}, {"end_of_flaw": "as we detail below.", "flaw_category": "4a", "flaw_category_description": "Lack of Clarity / Ambiguity: The paper is written in a way that is ambiguous or difficult to understand, preventing an expert from properly interpreting the work.", "flaw_confidence": 5, "flaw_description": "The paper contained inconsistencies in notation (e.g., whether covariates were row or column vectors) and typos in matrix dimensions within the description of the data distribution and input matrix formulation in Section 3.1. These errors caused confusion and reduced clarity, which the authors corrected.", "flaw_id": 9, "flaw_severity": "low", "flaw_title": "Inconsistent Notation and Dimensionality Typos", "is_addressed": true, "review_id": "QQAc62zhnn", "start_of_flaw": "The data distribution can be thought of"}, {"end_of_flaw": "transformer optimization.", "flaw_category": "4a", "flaw_category_description": "Lack of Clarity / Ambiguity: The paper is written in a way that is ambiguous or difficult to understand, preventing an expert from properly interpreting the work.", "flaw_confidence": 5, "flaw_description": "The paper contained minor grammatical issues, such as the use of \u0027features\u0027 instead of \u0027concepts\u0027 in Section 2.1, and inconsistent capitalization of \u0027Transformers\u0027 throughout the manuscript. These small errors detracted from the overall polish and clarity, and were corrected by the authors.", "flaw_id": 10, "flaw_severity": "low", "flaw_title": "Minor Presentation and Grammatical Inconsistencies", "is_addressed": true, "review_id": "QQAc62zhnn", "start_of_flaw": "The features defined above are typically of great"}];
 const addressedData = [{"end_of_flaw_addressed_text": "the Transformer optimization landscape.", "flaw_addressed_confidence": 5, "flaw_addressed_description": "While the core \u0027missing theoretical foundation\u0027 remains, the authors clarified the research scope and limitations. A new paragraph was added after \u0027Main contributions\u0027 explicitly stating that theoretical research and development of optimization methods are \u0027out-of-scope of this work, and left for future work.\u0027 The conclusion also explicitly acknowledges the lack of a solid theoretical foundation for their findings.", "flaw_addressed_quality": 2, "flaw_id": 1, "start_of_flaw_addressed_text": "We expect that such a simple"}, {"end_of_flaw_addressed_text": "for \u003ca href=\"#sec:mlp\" data-reference-type=\"ref+label\" data-reference=\"sec:mlp\"\u003e7\u003c/a\u003e for details.", "flaw_addressed_confidence": 5, "flaw_addressed_description": "The authors addressed the limited scope by adding new empirical evaluations. A new paragraph in Section 3.2 introduces \u0027additional set of experiments for a nonlinear regression\u0027 where covariates are distorted by an MLP with nonlinear activations. These experiments are detailed in a new Section 7, expanding the empirical scope beyond purely linear regression.", "flaw_addressed_quality": 4, "flaw_id": 2, "start_of_flaw_addressed_text": "In order to see the effect"}, {"end_of_flaw_addressed_text": "in \u003ca href=\"#fig:histogram_2\" data-reference-type=\"ref+label\" data-reference=\"fig:histogram_2\"\u003e[fig:histogram_2]\u003c/a\u003e.", "flaw_addressed_confidence": 5, "flaw_addressed_description": "To provide a more quantitative analysis, the authors updated Figure 2, Figure 3, Figure 6, and Figure 7 to include quantile-quantile (Q-Q) plots in the top-right corner of the histograms. The caption for Figure 3 was explicitly updated to explain that these Q-Q plots compare the histogram (y-axis) with its best-fit Gaussian (x-axis), providing a more rigorous assessment of heavy-tailedness.", "flaw_addressed_quality": 5, "flaw_id": 3, "start_of_flaw_addressed_text": "The heavy-tail stochastic gradient noise"}, {"end_of_flaw_addressed_text": "and softmax Transformers.", "flaw_addressed_confidence": 5, "flaw_addressed_description": "The paper now includes a discussion in Section 3.1 about the behavior of attention weights without softmax activation. It notes that the lack of softmax may lead to denser attention scores for linear transformers compared to softmax transformers, but also states that the sparsity of learned attention scores depends on the data distribution, providing an example with orthogonal covariates.", "flaw_addressed_quality": 4, "flaw_id": 4, "start_of_flaw_addressed_text": "We also note that the"}, {"end_of_flaw_addressed_text": "largely similar to ours.", "flaw_addressed_confidence": 5, "flaw_addressed_description": "The authors added an ablation study to address the simplified attention parameterization. In Section 3.1, they state that an experiment shown in the left plot of Figure 5 verifies that using separate Q, K (query, key) matrices (the standard parametrization) yields a loss plot largely similar to their simplified approach, demonstrating that the simplification does not qualitatively alter the optimization characteristics.", "flaw_addressed_quality": 5, "flaw_id": 5, "start_of_flaw_addressed_text": "We also note that the key-query"}, {"end_of_flaw_addressed_text": "the Transformer optimization landscape.", "flaw_addressed_confidence": 5, "flaw_addressed_description": "The paper\u0027s scope is now more clearly defined. The Introduction refines the description of the linear attention model as an abstraction \u0027without nonlinear activations and feedforward networks\u0027. Furthermore, a new paragraph was added after \u0027Main contributions\u0027 explicitly stating what aspects (e.g., theoretical research, optimization method development) are \u0027out-of-scope of this work, and left for future work,\u0027 providing a clearer delimitation.", "flaw_addressed_quality": 4, "flaw_id": 6, "start_of_flaw_addressed_text": "We expect that such a simple"}, {"end_of_flaw_addressed_text": "\u003cem\u003eZ^\top Q Z\u003c/em\u003e.", "flaw_addressed_confidence": 5, "flaw_addressed_description": "The authors explicitly clarified the omission of Feed Forward Networks (FFNs). In the Introduction, they describe the linear attention model as an abstraction \u0027without nonlinear activations and feedforward networks\u0027. This is further reiterated in Section 3.1, where they state that \u0027our architecture does not have feedforward networks\u0027.", "flaw_addressed_quality": 5, "flaw_id": 7, "start_of_flaw_addressed_text": "We emphasize here that the linear"}, {"end_of_flaw_addressed_text": "for \u003ca href=\"#sec:hyper\" data-reference-type=\"ref+label\" data-reference=\"sec:hyper\"\u003e6\u003c/a\u003e for details.", "flaw_addressed_confidence": 5, "flaw_addressed_description": "The authors addressed this by adding a new appendix section, \u0027Hyperparameters for the experiments\u0027 (Section 6), which includes a detailed table (\u0027table:hyper\u0027) summarizing the specific learning rates for SGD and Adam across all nine experimental settings. General parameters like momentum (0.9 for SGD, 0.9 for Adam) and gradient clipping thresholds (1) are also explicitly stated, greatly improving reproducibility.", "flaw_addressed_quality": 5, "flaw_id": 8, "start_of_flaw_addressed_text": "For each different setting,"}, {"end_of_flaw_addressed_text": "linear regression examples:", "flaw_addressed_confidence": 5, "flaw_addressed_description": "The authors made significant corrections in Section 3.1 regarding the data distribution and input matrix formulation. They clarified the notation for covariates (from `{i}` to `x^(i)`), corrected the representation of the input matrix `Z_0` in the equation to properly include `x^(i)` and `y^(i)` in line with its `(d+1) x (n+1)` dimensions, and clarified the prediction goal from \u0027missing `n+1`\u0027 to \u0027missing `y^(n+1)`\u0027. These changes resolve inconsistencies and improve clarity.", "flaw_addressed_quality": 5, "flaw_id": 9, "start_of_flaw_addressed_text": "The data distribution can be"}, {"end_of_flaw_addressed_text": "the optimization literature.", "flaw_addressed_confidence": 5, "flaw_addressed_description": "The authors addressed minor grammatical and presentation inconsistencies. Specifically, in Section 2.1 (\u0027A whirlwind tour of (convex) optimization theory\u0027), the word \u0027features\u0027 was corrected to \u0027concepts\u0027. Furthermore, the capitalization of \u0027Transformers\u0027 was made consistent throughout the entire manuscript (e.g., \u0027Transformer optimization\u0027, \u0027full Transformers\u0027, \u0027linear Transformers\u0027), improving overall polish and readability.", "flaw_addressed_quality": 5, "flaw_id": 10, "start_of_flaw_addressed_text": "For a symmetric matrix M,"}];
+const missingFlawData = [2, 3, 5, 6, 7];
+const missingAddressedData = [2, 7, 8, 10];
+
 
 let dialogs = {
     submitted: null,
@@ -1725,11 +1773,23 @@ function clearActive(){
 function activateFlaw(id){
 
     closeAllDialogs()
-
     clearActive()
 
     document.querySelectorAll(`.flaw[data-flaw-id="${id}"]`)
     .forEach(el=>el.classList.add('active'))
+
+    // Check missing cases explicitly
+    const isMissingSubmitted = missingFlawData.includes(parseInt(id))
+    const isMissingCamera = missingAddressedData.includes(parseInt(id))
+
+    // Show errors if needed
+    if (isMissingSubmitted) {
+        showFlawMissingError(id, "submitted")
+    }
+
+    if (isMissingCamera) {
+        showFlawMissingError(id, "camera")
+    }
 
     document.querySelector(`.flaw-index[data-flaw-id="${id}"]`)
     .classList.add('active')
@@ -1772,6 +1832,27 @@ function scrollToFlaw(id){
     }
 }
 
+function showFlawMissingError(flawId, side) {
+
+    const el = document.getElementById(
+        side === "submitted" ? "submitted-error" : "camera-error"
+    );
+    if (!el) return;
+
+    let message = "";
+    if (side === "submitted") {
+        message = `<b>Flaw ${flawId}:</b> Could not be located in the submitted paper because the text match failed.`;
+    } else {
+        message = `<b>Addressed Flaw ${flawId}:</b> Content could not be located in the camera-ready paper. This may mean the flaw was not addressed or the text match failed.`;
+    }
+
+    el.innerHTML = message;
+    el.style.display = "block";
+
+    setTimeout(() => {
+        el.style.display = "none";
+    }, 5000);
+}
 
 document.querySelectorAll('.flaw-index')
 .forEach(el=>{
@@ -1780,8 +1861,48 @@ document.querySelectorAll('.flaw-index')
     })
 })
 
+function restoreSurveyAnswers(flawId, side, dialog) {
 
-function createDialog(side, content, x, y){
+    let data = null;
+
+    if (side === "submitted") {
+        data = surveyData.flaws_survey[flawId];
+    } else if (side === "camera") {
+        data = surveyData.flaws_addressed_survey[flawId];
+    }
+
+    if (!data) return; // nothing to restore
+
+    // Restore radios
+    Object.keys(data).forEach(key => {
+        if (!key.startsWith("question_")) return;
+
+        const value = data[key];
+
+        // find radio with matching value inside dialog
+        const radios = dialog.querySelectorAll(`input[type="radio"][value="${value}"]`);
+
+        // radios include all questions, so pick the correct group index
+        const questionIndex = parseInt(key.split("_")[1]) - 1;
+        const groups = dialog.querySelectorAll(".scale-options");
+
+        if (groups[questionIndex]) {
+            const radio = groups[questionIndex].querySelector(`input[value="${value}"]`);
+            if (radio) radio.checked = true;
+        }
+    });
+
+    // Restore comment
+    const commentField = dialog.querySelector(
+        "textarea[name='flaw_comment'], textarea[name='flaw_addressed_comment']"
+    );
+
+    if (commentField && data[commentField.name] !== undefined) {
+        commentField.value = data[commentField.name];
+    }
+}
+
+function createDialog(flawId, side, content, x, y){
 
     closeDialog(side)
 
@@ -1802,6 +1923,9 @@ function createDialog(side, content, x, y){
     dialogs[side] = d
 
     container.classList.add("locked")
+
+    // Restore survey data 
+    restoreSurveyAnswers(flawId, side, d)
 }
 
 
@@ -1833,9 +1957,13 @@ document.querySelectorAll('.flaw')
                 reviewURL = `https://openreview.net/forum?id=${openreviewPaperId}#:~:text=${encodedHighlight}`;
             }
             
+            const existing = surveyData.flaws_survey[id];
+            const badge = existing
+                ? `<span class="badge badge-filled">Survey Filled</span>`
+                : `<span class="badge badge-empty">Survey Not filled</span>`;
 
             const html = `
-            <h4>Flaw ${id}</h4>
+            <h4>Flaw ${id} ${badge}</h4>
             <b>${flaw.flaw_title}</b><br><br>
             ${flaw.flaw_description}<br><br>
             <b>Category:</b> ${flaw.flaw_category}<br>
@@ -1849,6 +1977,7 @@ document.querySelectorAll('.flaw')
             `
 
             createDialog(
+                id,
                 "submitted",
                 html,
                 rect.left + window.scrollX,
@@ -1860,8 +1989,13 @@ document.querySelectorAll('.flaw')
 
             const flaw = addressedData.find(f=>f.flaw_id === id)
 
+            const existing = surveyData.flaws_addressed_survey[id];
+            const badge = existing
+                ? `<span class="badge badge-filled">Survey Filled</span>`
+                : `<span class="badge badge-empty">Survey Not filled</span>`;
+
             const html = `
-            <h4>Addressed Flaw ${id}</h4>
+            <h4>Addressed Flaw ${id} ${badge}</h4>
             ${flaw.flaw_addressed_description}<br><br>
             <b>Quality:</b> ${flaw.flaw_addressed_quality}<br>
             <b>Confidence:</b> ${flaw.flaw_addressed_confidence}
@@ -1870,6 +2004,7 @@ document.querySelectorAll('.flaw')
             `
 
             createDialog(
+                id,
                 "camera",
                 html,
                 rect.left + window.scrollX,
@@ -1899,6 +2034,10 @@ function submittedSurveyHTML(flawId) {
         <label for="flaw${flawId}-c-4">4</label>
         <input type="radio" name="flaw${flawId}-clarity" id="flaw${flawId}-c-5" value="5">
         <label for="flaw${flawId}-c-5">5</label>
+        <input type="radio" name="flaw${flawId}-clarity" id="flaw${flawId}-c-na" value="na">
+        <label for="flaw${flawId}-c-na">N/A</label>
+        <input type="radio" name="flaw${flawId}-clarity" id="flaw${flawId}-c-dk" value="dont_know">
+        <label for="flaw${flawId}-c-dk">Don't know</label>
     </div>
     <small class="scale-note">(1 = Not clear at all, 5 = Very clear)</small>
     <hr>
@@ -1916,6 +2055,10 @@ function submittedSurveyHTML(flawId) {
         <label for="flaw${flawId}-cat-4">4</label>
         <input type="radio" name="flaw${flawId}-category" id="flaw${flawId}-cat-5" value="5">
         <label for="flaw${flawId}-cat-5">5</label>
+        <input type="radio" name="flaw${flawId}-category" id="flaw${flawId}-cat-na" value="na">
+        <label for="flaw${flawId}-cat-na">N/A</label>
+        <input type="radio" name="flaw${flawId}-category" id="flaw${flawId}-cat-dk" value="dont_know">
+        <label for="flaw${flawId}-cat-dk">Don't know</label>
     </div>
     <small class="scale-note">(1 = Not appropriate, 5 = Perfectly appropriate)</small>
     <hr>
@@ -1933,6 +2076,10 @@ function submittedSurveyHTML(flawId) {
         <label for="flaw${flawId}-sev-4">4</label>
         <input type="radio" name="flaw${flawId}-severity" id="flaw${flawId}-sev-5" value="5">
         <label for="flaw${flawId}-sev-5">5</label>
+        <input type="radio" name="flaw${flawId}-severity" id="flaw${flawId}-sev-na" value="na">
+        <label for="flaw${flawId}-sev-na">N/A</label>
+        <input type="radio" name="flaw${flawId}-severity" id="flaw${flawId}-sev-dk" value="dont_know">
+        <label for="flaw${flawId}-sev-dk">Don't know</label>
     </div>
     <small class="scale-note">(1 = Totally inaccurate, 5 = Very accurate)</small>
     <hr>
@@ -1950,8 +2097,21 @@ function submittedSurveyHTML(flawId) {
         <label for="flaw${flawId}-conf-4">4</label>
         <input type="radio" name="flaw${flawId}-confidence" id="flaw${flawId}-conf-5" value="5">
         <label for="flaw${flawId}-conf-5">5</label>
+        <input type="radio" name="flaw${flawId}-confidence" id="flaw${flawId}-conf-na" value="na">
+        <label for="flaw${flawId}-conf-na">N/A</label>
+        <input type="radio" name="flaw${flawId}-confidence" id="flaw${flawId}-conf-dk" value="dont_know">
+        <label for="flaw${flawId}-conf-dk">Don't know</label>
     </div>
     <small class="scale-note">(1 = Not reasonable, 5 = Very reasonable)</small>
+    <hr>
+
+    <!--  Additional Comments -->
+    <p>Additional comments (optional)</p>
+    <textarea 
+        rows="3"
+        class="dialog-textarea"
+        name="flaw_comment"
+    ></textarea>
 
     <button class="survey-save-btn" onclick="saveSurvey(${flawId}, 'submitted')">Save</button>
     `;
@@ -1975,6 +2135,10 @@ function addressedSurveyHTML(flawId) {
         <label for="addr${flawId}-d-4">4</label>
         <input type="radio" name="addr${flawId}-desc" id="addr${flawId}-d-5" value="5">
         <label for="addr${flawId}-d-5">5</label>
+        <input type="radio" name="addr${flawId}-desc" id="addr${flawId}-d-na" value="na">
+        <label for="addr${flawId}-d-na">N/A</label>
+        <input type="radio" name="addr${flawId}-desc" id="addr${flawId}-d-dk" value="dont_know">
+        <label for="addr${flawId}-d-dk">Don't know</label>
     </div>
     <small class="scale-note">(1 = Not clear at all, 5 = Very clear)</small>
     <hr>
@@ -1992,6 +2156,10 @@ function addressedSurveyHTML(flawId) {
         <label for="addr${flawId}-q-4">4</label>
         <input type="radio" name="addr${flawId}-quality" id="addr${flawId}-q-5" value="5">
         <label for="addr${flawId}-q-5">5</label>
+        <input type="radio" name="addr${flawId}-quality" id="addr${flawId}-q-na" value="na">
+        <label for="addr${flawId}-q-na">N/A</label>
+        <input type="radio" name="addr${flawId}-quality" id="addr${flawId}-q-dk" value="dont_know">
+        <label for="addr${flawId}-q-dk">Don't know</label>
     </div>
     <small class="scale-note">(1 = Poor, 5 = Excellent)</small>
     <hr>
@@ -2009,8 +2177,22 @@ function addressedSurveyHTML(flawId) {
         <label for="addr${flawId}-conf-4">4</label>
         <input type="radio" name="addr${flawId}-confidence" id="addr${flawId}-conf-5" value="5">
         <label for="addr${flawId}-conf-5">5</label>
+        <input type="radio" name="addr${flawId}-confidence" id="addr${flawId}-conf-na" value="na">
+        <label for="addr${flawId}-conf-na">N/A</label>
+        <input type="radio" name="addr${flawId}-confidence" id="addr${flawId}-conf-dk" value="dont_know">
+        <label for="addr${flawId}-conf-dk">Don't know</label>
     </div>
     <small class="scale-note">(1 = Not reasonable, 5 = Very reasonable)</small>
+    <hr>
+
+    <!--  Additional Comments -->
+    <p>Additional comments (optional)</p>
+    <textarea 
+        rows="3"
+        class="dialog-textarea"
+        name="flaw_addressed_comment"
+    ></textarea>
+    <br>
 
     <button class="survey-save-btn" onclick="saveSurvey(${flawId}, 'camera')">Save</button>
     `;
@@ -2054,6 +2236,12 @@ function saveSurvey(flawId, side) {
             answers[`question_${index + 1}`] = selected.value;
         }
     });
+
+    // Collect optional comment (if present)
+    const commentField = dialog.querySelector("textarea[name='flaw_comment'], textarea[name='flaw_addressed_comment']");
+    if (commentField) {
+        answers[commentField.name] = commentField.value.trim();
+    }
 
 
     if (!allAnswered) {

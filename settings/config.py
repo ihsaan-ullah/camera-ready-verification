@@ -13,8 +13,8 @@ FLAWS_ADDRESSED_JSON = "flaws_addressed.json"
 REVIEWS_JSON = "reviews.json"
 
 HTML_TEMPLATE_DIRECTORY = "html"
-HTML_TEMPLATE_FILE_NAME = "template_v2.html"
-ANNOTATED_HTML_FILE = "annotated_v2.html"
+HTML_TEMPLATE_FILE_NAME = "template_v1.html"
+ANNOTATED_HTML_FILE = "annotated_v1.html"
 
 
 GEMINI_MODEL = "gemini-2.5-flash"
