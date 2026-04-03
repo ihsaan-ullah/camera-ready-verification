@@ -823,6 +823,7 @@ function restoreSurveyAnswers(flawId, side, dialog) {
 
     if (!data) return; // nothing to restore
 
+    // Restore radios
     Object.keys(data).forEach(key => {
         if (!key.startsWith("question_")) return;
 
@@ -1173,6 +1174,15 @@ function submittedSurveyHTML(flawId) {
         <label for="flaw${flawId}-conf-dk">Don't know</label>
     </div>
     <small class="scale-note">(1 = Not reasonable, 5 = Very reasonable)</small>
+    <hr>
+
+    <!--  Additional Comments -->
+    <p>Additional comments (optional)</p>
+    <textarea 
+        rows="3"
+        class="dialog-textarea"
+        name="flaw_comment"
+    ></textarea>
 
     <button class="survey-save-btn" onclick="saveSurvey(${flawId}, 'submitted')">Save</button>
     `;
@@ -1258,6 +1268,16 @@ function addressedSurveyHTML(flawId) {
         <input type="radio" name="addr${flawId}-source" id="addr${flawId}-src-dk" value="dont_know">
         <label for="addr${flawId}-src-dk">Don't know</label>
     </div>
+    <hr>
+
+    <!--  Additional Comments -->
+    <p>Additional comments (optional)</p>
+    <textarea 
+        rows="3"
+        class="dialog-textarea"
+        name="flaw_addressed_comment"
+    ></textarea>
+    <br>
 
     <button class="survey-save-btn" onclick="saveSurvey(${flawId}, 'camera')">Save</button>
     `;
@@ -1313,7 +1333,10 @@ function saveSurvey(flawId, side) {
     // 3. Collect textareas
     const textareas = Array.from(dialog.querySelectorAll("textarea.dialog-textarea"));
     textareas.forEach((ta, index) => {
-        if (!ta.value.trim()) allEditsAnswered = false;
+        // Only require non-comment textareas
+        if (!["flaw_addressed_comment", "flaw_comment"].includes(ta.name) && !ta.value.trim()) {
+            allEditsAnswered = false;
+        }
         answers[ta.name] = ta.value.trim();
     });
 
