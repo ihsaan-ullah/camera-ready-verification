@@ -428,6 +428,25 @@ body{
     box-shadow: 0 6px 16px rgba(0,0,0,0.25);
 }
 
+/* Badge for dilaog: filled/unfilled */
+.badge {
+    margin-left:8px;
+    padding:2px 8px;
+    font-size:12px;
+    border-radius:999px;
+    font-weight:400;
+}
+
+.badge-filled {
+    background:#16a34a;
+    color:white;
+}
+
+.badge-empty {
+    background:#e5e7eb;
+    color:#374151;
+}
+
 </style>
 </head>
 
@@ -792,8 +811,59 @@ document.querySelectorAll('.flaw-index')
     })
 })
 
+function restoreSurveyAnswers(flawId, side, dialog) {
 
-function createDialog(side, content, x, y){
+    let data = null;
+
+    if (side === "submitted") {
+        data = surveyData.flaws_survey[flawId];
+    } else if (side === "camera") {
+        data = surveyData.flaws_addressed_survey[flawId];
+    }
+
+    if (!data) return; // nothing to restore
+
+    Object.keys(data).forEach(key => {
+        if (!key.startsWith("question_")) return;
+
+        const value = data[key];
+
+        // find radio with matching value inside dialog
+        const radios = dialog.querySelectorAll(`input[type="radio"][value="${value}"]`);
+
+        // radios include all questions, so pick the correct group index
+        const questionIndex = parseInt(key.split("_")[1]) - 1;
+        const groups = dialog.querySelectorAll(".scale-options");
+
+        if (groups[questionIndex]) {
+            const radio = groups[questionIndex].querySelector(`input[value="${value}"]`);
+            if (radio) radio.checked = true;
+        }
+    });
+
+    // ---- Restore text inputs ----
+    dialog.querySelectorAll("input.dialog-input").forEach(input => {
+        if (data[input.name] !== undefined) {
+            input.value = data[input.name];
+        }
+    });
+
+    // ---- Restore textareas ----
+    dialog.querySelectorAll("textarea.dialog-textarea").forEach(ta => {
+        if (data[ta.name] !== undefined) {
+            ta.value = data[ta.name];
+        }
+    });
+
+    // ---- Restore selects ----
+    dialog.querySelectorAll("select.dialog-select").forEach(sel => {
+        if (data[sel.name] !== undefined) {
+            sel.value = data[sel.name];
+        }
+    });
+}
+
+function createDialog(flawId, side, content, x, y){
 
     closeDialog(side)
 
@@ -814,6 +884,9 @@ function createDialog(side, content, x, y){
     dialogs[side] = d
 
     container.classList.add("locked")
+
+    // Restore survey data 
+    restoreSurveyAnswers(flawId, side, d)
 }
 
 
@@ -844,9 +917,14 @@ document.querySelectorAll('.flaw')
                 const encodedHighlight = encodeURIComponent(highlightText);
                 reviewURL = `https://openreview.net/forum?id=${openreviewPaperId}#:~:text=${encodedHighlight}`;
             }
-            
+
+            const existing = surveyData.flaws_survey[id];
+            const badge = existing
+                ? `<span class="badge badge-filled">Survey Filled</span>`
+                : `<span class="badge badge-empty">Survey Not filled</span>`;
+
             const flawInfo = `
-            <h4>Flaw ${id}</h4>
+            <h4>Flaw ${id} ${badge}</h4>
             <b>${flaw.flaw_title}</b><br><br>
             ${flaw.flaw_description}<br><br>
             <b>Category:</b> ${flaw.flaw_category}<br>
@@ -921,6 +999,7 @@ document.querySelectorAll('.flaw')
             `
 
             createDialog(
+                id,
                 "submitted",
                 html,
                 rect.left + window.scrollX,
@@ -932,8 +1011,13 @@ document.querySelectorAll('.flaw')
 
             const flaw = addressedData.find(f=>f.flaw_id === id)
 
+            const existing = surveyData.flaws_addressed_survey[id];
+            const badge = existing
+                ? `<span class="badge badge-filled">Survey Filled</span>`
+                : `<span class="badge badge-empty">Survey Not filled</span>`;
+
             const flawAddressedInfo = `
-            <h4>Addressed Flaw ${id}</h4>
+            <h4>Addressed Flaw ${id} ${badge}</h4>
             ${flaw.flaw_addressed_description}<br><br>
             <b>Quality:</b> ${flaw.flaw_addressed_quality}<br>
             <b>Confidence:</b> ${flaw.flaw_addressed_confidence}
@@ -990,6 +1074,7 @@ document.querySelectorAll('.flaw')
             `
 
             createDialog(
+                id,
                 "camera",
                 html,
                 rect.left + window.scrollX,
@@ -1019,6 +1104,10 @@ function submittedSurveyHTML(flawId) {
         <label for="flaw${flawId}-c-4">4</label>
         <input type="radio" name="flaw${flawId}-clarity" id="flaw${flawId}-c-5" value="5">
         <label for="flaw${flawId}-c-5">5</label>
+        <input type="radio" name="flaw${flawId}-clarity" id="flaw${flawId}-c-na" value="na">
+        <label for="flaw${flawId}-c-na">N/A</label>
+        <input type="radio" name="flaw${flawId}-clarity" id="flaw${flawId}-c-dk" value="dont_know">
+        <label for="flaw${flawId}-c-dk">Don't know</label>
     </div>
     <small class="scale-note">(1 = Not clear at all, 5 = Very clear)</small>
     <hr>
@@ -1036,6 +1125,10 @@ function submittedSurveyHTML(flawId) {
         <label for="flaw${flawId}-cat-4">4</label>
         <input type="radio" name="flaw${flawId}-category" id="flaw${flawId}-cat-5" value="5">
         <label for="flaw${flawId}-cat-5">5</label>
+        <input type="radio" name="flaw${flawId}-category" id="flaw${flawId}-cat-na" value="na">
+        <label for="flaw${flawId}-cat-na">N/A</label>
+        <input type="radio" name="flaw${flawId}-category" id="flaw${flawId}-cat-dk" value="dont_know">
+        <label for="flaw${flawId}-cat-dk">Don't know</label>
     </div>
     <small class="scale-note">(1 = Not appropriate, 5 = Perfectly appropriate)</small>
     <hr>
@@ -1053,6 +1146,10 @@ function submittedSurveyHTML(flawId) {
         <label for="flaw${flawId}-sev-4">4</label>
         <input type="radio" name="flaw${flawId}-severity" id="flaw${flawId}-sev-5" value="5">
         <label for="flaw${flawId}-sev-5">5</label>
+        <input type="radio" name="flaw${flawId}-severity" id="flaw${flawId}-sev-na" value="na">
+        <label for="flaw${flawId}-sev-na">N/A</label>
+        <input type="radio" name="flaw${flawId}-severity" id="flaw${flawId}-sev-dk" value="dont_know">
+        <label for="flaw${flawId}-sev-dk">Don't know</label>
     </div>
     <small class="scale-note">(1 = Totally inaccurate, 5 = Very accurate)</small>
     <hr>
@@ -1070,6 +1167,10 @@ function submittedSurveyHTML(flawId) {
         <label for="flaw${flawId}-conf-4">4</label>
         <input type="radio" name="flaw${flawId}-confidence" id="flaw${flawId}-conf-5" value="5">
         <label for="flaw${flawId}-conf-5">5</label>
+        <input type="radio" name="flaw${flawId}-confidence" id="flaw${flawId}-conf-na" value="na">
+        <label for="flaw${flawId}-conf-na">N/A</label>
+        <input type="radio" name="flaw${flawId}-confidence" id="flaw${flawId}-conf-dk" value="dont_know">
+        <label for="flaw${flawId}-conf-dk">Don't know</label>
     </div>
     <small class="scale-note">(1 = Not reasonable, 5 = Very reasonable)</small>
 
@@ -1095,6 +1196,10 @@ function addressedSurveyHTML(flawId) {
         <label for="addr${flawId}-d-4">4</label>
         <input type="radio" name="addr${flawId}-desc" id="addr${flawId}-d-5" value="5">
         <label for="addr${flawId}-d-5">5</label>
+        <input type="radio" name="addr${flawId}-desc" id="addr${flawId}-d-na" value="na">
+        <label for="addr${flawId}-d-na">N/A</label>
+        <input type="radio" name="addr${flawId}-desc" id="addr${flawId}-d-dk" value="dont_know">
+        <label for="addr${flawId}-d-dk">Don't know</label>
     </div>
     <small class="scale-note">(1 = Not clear at all, 5 = Very clear)</small>
     <hr>
@@ -1112,6 +1217,10 @@ function addressedSurveyHTML(flawId) {
         <label for="addr${flawId}-q-4">4</label>
         <input type="radio" name="addr${flawId}-quality" id="addr${flawId}-q-5" value="5">
         <label for="addr${flawId}-q-5">5</label>
+        <input type="radio" name="addr${flawId}-quality" id="addr${flawId}-q-na" value="na">
+        <label for="addr${flawId}-q-na">N/A</label>
+        <input type="radio" name="addr${flawId}-quality" id="addr${flawId}-q-dk" value="dont_know">
+        <label for="addr${flawId}-q-dk">Don't know</label>
     </div>
     <small class="scale-note">(1 = Poor, 5 = Excellent)</small>
     <hr>
@@ -1129,6 +1238,10 @@ function addressedSurveyHTML(flawId) {
         <label for="addr${flawId}-conf-4">4</label>
         <input type="radio" name="addr${flawId}-confidence" id="addr${flawId}-conf-5" value="5">
         <label for="addr${flawId}-conf-5">5</label>
+        <input type="radio" name="addr${flawId}-confidence" id="addr${flawId}-conf-na" value="na">
+        <label for="addr${flawId}-conf-na">N/A</label>
+        <input type="radio" name="addr${flawId}-confidence" id="addr${flawId}-conf-dk" value="dont_know">
+        <label for="addr${flawId}-conf-dk">Don't know</label>
     </div>
     <small class="scale-note">(1 = Not reasonable, 5 = Very reasonable)</small>
     <hr>
@@ -1138,9 +1251,12 @@ function addressedSurveyHTML(flawId) {
     <div class="scale-options">
         <input type="radio" name="addr${flawId}-source" id="addr${flawId}-src-human" value="human">
         <label for="addr${flawId}-src-human">Human</label>
-
         <input type="radio" name="addr${flawId}-source" id="addr${flawId}-src-llm" value="llm">
         <label for="addr${flawId}-src-llm">LLM</label>
+        <input type="radio" name="addr${flawId}-source" id="addr${flawId}-src-na" value="na">
+        <label for="addr${flawId}-src-na">N/A</label>
+        <input type="radio" name="addr${flawId}-source" id="addr${flawId}-src-dk" value="dont_know">
+        <label for="addr${flawId}-src-dk">Don't know</label>
     </div>
 
     <button class="survey-save-btn" onclick="saveSurvey(${flawId}, 'camera')">Save</button>
