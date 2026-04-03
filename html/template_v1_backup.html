@@ -205,6 +205,15 @@ body{
     border-top:1px solid #ddd;
 }
 
+.dialog-textarea{
+    width:100%;
+    padding:6px 8px;
+    border:1px solid #ccc;
+    border-radius:4px;
+    font-size:14px;
+    box-sizing:border-box;
+}
+
 .scale-options {
     margin-top: 6px;
 }
@@ -759,6 +768,7 @@ function restoreSurveyAnswers(flawId, side, dialog) {
 
     if (!data) return; // nothing to restore
 
+    // Restore radios
     Object.keys(data).forEach(key => {
         if (!key.startsWith("question_")) return;
 
@@ -776,6 +786,15 @@ function restoreSurveyAnswers(flawId, side, dialog) {
             if (radio) radio.checked = true;
         }
     });
+
+    // Restore comment
+    const commentField = dialog.querySelector(
+        "textarea[name='flaw_comment'], textarea[name='flaw_addressed_comment']"
+    );
+
+    if (commentField && data[commentField.name] !== undefined) {
+        commentField.value = data[commentField.name];
+    }
 }
 
 function createDialog(flawId, side, content, x, y){
@@ -979,6 +998,15 @@ function submittedSurveyHTML(flawId) {
         <label for="flaw${flawId}-conf-dk">Don't know</label>
     </div>
     <small class="scale-note">(1 = Not reasonable, 5 = Very reasonable)</small>
+    <hr>
+
+    <!--  Additional Comments -->
+    <p>Additional comments (optional)</p>
+    <textarea 
+        rows="3"
+        class="dialog-textarea"
+        name="flaw_comment"
+    ></textarea>
 
     <button class="survey-save-btn" onclick="saveSurvey(${flawId}, 'submitted')">Save</button>
     `;
@@ -1050,6 +1078,16 @@ function addressedSurveyHTML(flawId) {
         <label for="addr${flawId}-conf-dk">Don't know</label>
     </div>
     <small class="scale-note">(1 = Not reasonable, 5 = Very reasonable)</small>
+    <hr>
+
+    <!--  Additional Comments -->
+    <p>Additional comments (optional)</p>
+    <textarea 
+        rows="3"
+        class="dialog-textarea"
+        name="flaw_addressed_comment"
+    ></textarea>
+    <br>
 
     <button class="survey-save-btn" onclick="saveSurvey(${flawId}, 'camera')">Save</button>
     `;
@@ -1093,6 +1131,12 @@ function saveSurvey(flawId, side) {
             answers[`question_${index + 1}`] = selected.value;
         }
     });
+
+    // Collect optional comment (if present)
+    const commentField = dialog.querySelector("textarea[name='flaw_comment'], textarea[name='flaw_addressed_comment']");
+    if (commentField) {
+        answers[commentField.name] = commentField.value.trim();
+    }
 
 
     if (!allAnswered) {
