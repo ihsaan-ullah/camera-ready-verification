@@ -125,6 +125,12 @@ class HTMLAnnotator:
 
             start = flaw.get("start_of_flaw_addressed_text")
             end = flaw.get("end_of_flaw_addressed_text")
+            is_addressed = flaw.get("is_addressed")
+
+            if not is_addressed:
+                print(f"⚠️  Flaw {flaw_id} is not addressed")
+                self.missing_flaws_addressed.append(flaw_id)
+                continue
 
             if not start or not end:
                 self.missing_flaws_addressed.append(flaw_id)

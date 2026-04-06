@@ -1,34 +1,29 @@
 [
     {
-        "flaw_id": 2,
-        "start_of_flaw_addressed_text": "Furthermore, we include a preference",
-        "end_of_flaw_addressed_text": "best baseline, PreAdd.",
-        "flaw_addressed_description": "The authors addressed the lack of a finer-grained qualitative evaluation by adding a preference analysis using GPT-4. This analysis compares their proposed method against the best baseline (PreAdd) in toxicity reduction, providing an LLM-backed evaluation that goes beyond automated classifier and perplexity scores.",
-        "flaw_addressed_quality": 5,
-        "flaw_addressed_confidence": 5
-    },
-    {
-        "flaw_id": 3,
-        "start_of_flaw_addressed_text": "We further evaluate model arithmetic",
-        "end_of_flaw_addressed_text": "efappendix:sentiment.",
-        "flaw_addressed_description": "The paper now includes an additional evaluation on the task of sentiment control, thereby broadening the scope of generative scenarios beyond just toxicity reduction and fine-grained topic control, as suggested by reviewers.",
-        "flaw_addressed_quality": 5,
-        "flaw_addressed_confidence": 5
-    },
-    {
-        "flaw_id": 4,
-        "start_of_flaw_addressed_text": "Finally, we note that this fine-grained",
-        "end_of_flaw_addressed_text": "agnostic) classifier.",
-        "flaw_addressed_description": "The paper explicitly acknowledges the technical limitation that using classifiers at very high strengths for certain attributes (e.g., 'educational') can lead to a slight decrease in the fluency of the generated text, which was the identified flaw.",
+        "flaw_id": 1,
+        "is_addressed": true,
+        "start_of_flaw_addressed_text": "We evaluate model arithmetic by",
+        "end_of_flaw_addressed_text": "efappendix:experimental_details.",
+        "flaw_addressed_description": "The authors addressed the limited evaluation scope by adding a dedicated sentiment control task in Appendix F and including results for the GPT-2 model family in Appendix I.1. Although the references to these appendices were present in the submitted paper, the flaw description states that the actual content was added/improved in the camera-ready version, thus broadening the empirical coverage.",
         "flaw_addressed_quality": 4,
         "flaw_addressed_confidence": 5
     },
     {
-        "flaw_id": 6,
-        "start_of_flaw_addressed_text": "eftable:toxicity_gpt2 in efappendix:toxicity_gpt2 shows",
-        "end_of_flaw_addressed_text": "GPT-2 model family .",
-        "flaw_addressed_description": "The authors extended the toxicity reduction evaluation to include results for the GPT-2 model family, providing experiments with smaller language models and a broader understanding of the method's applicability across different model scales.",
-        "flaw_addressed_quality": 5,
+        "flaw_id": 2,
+        "is_addressed": true,
+        "start_of_flaw_addressed_text": "First, we assess the",
+        "end_of_flaw_addressed_text": "even lower perplexity values.",
+        "flaw_addressed_description": "The authors addressed the limitations in the toxicity reduction evaluation by adding a GPT-4-based preference analysis as a surrogate for human evaluation (referenced in eftable:toxicity_gpt4) and by extending the investigation of parameters for existing baselines to ensure fairer comparisons. These changes, as noted in the flaw description, rectify the initially flawed and limited evaluation setup.",
+        "flaw_addressed_quality": 4,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 3,
+        "is_addressed": false,
+        "start_of_flaw_addressed_text": null,
+        "end_of_flaw_addressed_text": null,
+        "flaw_addressed_description": "While the perplexity graphs for fluency validation were reportedly added to Appendix I.2 (as indicated by the flaw description), the camera-ready paper does not include any visible clarification in the main body of the 'Fine-grained Control' section regarding the empirical approach to selecting lambda coefficients, nor does it provide explicit principled guidance for these parameters. Therefore, this significant part of the flaw remains unaddressed in the visible text.",
+        "flaw_addressed_quality": null,
         "flaw_addressed_confidence": 5
     }
 ]

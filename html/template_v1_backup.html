@@ -556,6 +556,7 @@ let surveyData = {
     flaws_survey: {},          // key: flawId, value: survey answers
     flaws_addressed_survey: {} // key: flawId, value: survey answers
 };
+
 const openreviewPaperId = {{ openreview_paper_id | tojson }};
 const reviewData = {{ reviews | tojson }};
 const flawData = {{ flaws | tojson }};
@@ -790,7 +791,14 @@ function showFlawMissingError(flawId, side) {
     if (side === "submitted") {
         message = `<b>Flaw ${flawId}:</b> Could not be located in the submitted paper because the text match failed.`;
     } else {
-        message = `<b>Addressed Flaw ${flawId}:</b> Content could not be located in the camera-ready paper. This may mean the flaw was not addressed or the text match failed.`;
+        const flawAddressed = addressedData.find(f => String(f.flaw_id) === String(flawId));
+        const isAddressed = flawAddressed.is_addressed;
+        const description = flawAddressed.flaw_addressed_description;
+        if (isAddressed) {
+            message = `<b>Addressed Flaw ${flawId}:</b> Content could not be located in the camera-ready paper. This may mean the flaw was not addressed or the text match failed.`;
+        } else {
+            message = `<b>Addressed Flaw ${flawId}:</b> was not addressed in the camera-ready paper.<br><b>Description:</b> ${description}`;
+        }
     }
 
     el.innerHTML = message;
