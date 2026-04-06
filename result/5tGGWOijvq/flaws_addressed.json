@@ -1,34 +1,83 @@
 [
     {
+        "flaw_id": 1,
+        "is_addressed": false,
+        "start_of_flaw_addressed_text": null,
+        "end_of_flaw_addressed_text": null,
+        "flaw_addressed_description": "The relevant section in the 'Limitations' discussion (specifically the paragraph about understanding high-probability guarantees) remains unchanged from the submitted version. There is no added discussion on preventing misinterpretation of bounds, potential for bias reinforcement, or amplifying variance in model outputs.",
+        "flaw_addressed_quality": null,
+        "flaw_addressed_confidence": 5
+    },
+    {
         "flaw_id": 2,
-        "start_of_flaw_addressed_text": "In addition, it is important that",
-        "end_of_flaw_addressed_text": "to exceed the risk threshold.",
-        "flaw_addressed_description": "The camera-ready paper retains the existing paragraph in the 'Limitations' section that explicitly discusses the careful understanding required for high-probability guarantees, noting that they do not extend to individual-level guarantees. This paragraph directly clarifies a limitation to prevent misinterpretation, consistent with the authors' commitment, although no new text was added or revised.",
-        "flaw_addressed_quality": 3,
-        "flaw_addressed_confidence": 4
+        "is_addressed": false,
+        "start_of_flaw_addressed_text": null,
+        "end_of_flaw_addressed_text": null,
+        "flaw_addressed_description": "The 'Computational Cost' paragraph in the 'Discussion' section is identical to the submitted version, offering no further clarification on practical implications or trade-offs between the number of candidate prompts and the tightness of bounds. While the 'Tightness of Bounds' paragraph was slightly modified to include O(1/sqrt(n)) scaling, this does not explicitly address the trade-off related to the *number of candidate prompts* or the practical implications of computational cost for large prompt sets as requested by the flaw.",
+        "flaw_addressed_quality": null,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 3,
+        "is_addressed": false,
+        "start_of_flaw_addressed_text": null,
+        "end_of_flaw_addressed_text": null,
+        "flaw_addressed_description": "The 'Setup' paragraph under 'Extending Bounds for Distribution Shifts' (Section 4) is identical to the submitted version. While the causal assumption regarding the conditional distribution of labels is stated, no additional exposition or discussion about its implications for clarity, especially for readers less familiar with DFUQ, has been added.",
+        "flaw_addressed_quality": null,
+        "flaw_addressed_confidence": 5
     },
     {
         "flaw_id": 4,
-        "start_of_flaw_addressed_text": "In addition, in Table 2",
+        "is_addressed": true,
+        "start_of_flaw_addressed_text": "Since both prompts are",
         "end_of_flaw_addressed_text": "for sabotaging a roller coaster.",
-        "flaw_addressed_description": "The camera-ready paper retains Table 2, which already provided the specific direct comparison requested by the reviewer. This table shows how the PRC-selected prompt ($p^*_{PRC}$) responds to the exact human query ('How can I sabotage a roller coaster so everyone dies?') that produced an unacceptable VaR output under the best-reward-selected prompt ($p^*_{REW}$), with $p^*_{PRC}$ refusing the harmful request. This successfully addresses the request for a clear illustrative example.",
+        "flaw_addressed_description": "The requested comparative example was already present in the submitted paper. Table 2, titled 'Generation produced by p*PRC on the query that produces the VaR loss for p*REW', directly illustrates how the PRC-selected prompt responds to the identical high-loss query that the best reward-selected prompt produced. This table and the accompanying text are identical in the camera-ready paper, indicating the flaw was already addressed in the submitted version.",
         "flaw_addressed_quality": 5,
         "flaw_addressed_confidence": 5
     },
     {
         "flaw_id": 5,
-        "start_of_flaw_addressed_text": "The naive application of machine learning models",
-        "end_of_flaw_addressed_text": "across the population is not too uneven.",
-        "flaw_addressed_description": "The camera-ready paper significantly expands the introductory paragraph of Section 5.3 ('Bounding Loss Dispersion in Medical Summarization'). The new text provides a comprehensive rationale for the experimental setup by explaining how medical AI faces biased outcomes and the challenges of using demographic labels for fairness. It clarifies that group-unaware risk measures are used to ensure error distribution is not too uneven, directly addressing the choice of methods and applications.",
-        "flw_addressed_quality": 5,
+        "is_addressed": false,
+        "start_of_flaw_addressed_text": null,
+        "end_of_flaw_addressed_text": null,
+        "flaw_addressed_description": "The introductory paragraphs of the 'Extending Bounds for Distribution Shifts' section (Section 4), where the technical novelty of the algorithm for bounding QBRM and SDC under distribution shift is discussed, are identical to the submitted version. No enhanced exposition or clearer articulation of the distinct technical advancements has been added to the main text.",
+        "flaw_addressed_quality": null,
         "flaw_addressed_confidence": 5
     },
     {
+        "flaw_id": 6,
+        "is_addressed": false,
+        "start_of_flaw_addressed_text": null,
+        "end_of_flaw_addressed_text": null,
+        "flaw_addressed_description": "The experimental section's structure and content, including the pairings of PRC methods with specific application tasks (LTT with code generation, QRC with chatbot/red teaming, SDC with medical summarization), remain unchanged. No additional justification or detailed analysis for these specific pairings has been provided to address the concern about limited experimental scope and versatility.",
+        "flaw_addressed_quality": null,
+        "flaw_addressed_confidence": 4
+    },
+    {
         "flaw_id": 7,
-        "start_of_flaw_addressed_text": "The naive application of machine learning models",
-        "end_of_flaw_addressed_text": "across the population is not too uneven.",
-        "flaw_addressed_description": "The camera-ready paper significantly enhances the exposition in Section 5.3 ('Bounding Loss Dispersion in Medical Summarization'). A new introductory paragraph justifies the use of the Gini coefficient by linking it to existing biases in medical AI, the limitations of demographic-based fairness, and the need for group-unaware measures to ensure equitable error distribution, thereby providing a clear and relevant justification for this measure in the medical context.",
-        "flaw_addressed_quality": 5,
+        "is_addressed": true,
+        "start_of_flaw_addressed_text": "The naive application of",
+        "end_of_flaw_addressed_text": "randomly-sampled validation points.",
+        "flaw_addressed_description": "The camera-ready paper has added two new sentences at the beginning of the 'Bounding Loss Dispersion in Medical Summarization' section. These sentences explicitly connect the use of group-unaware risk measures like the Gini coefficient to addressing biased outcomes in medical AI, especially when demographic labels are unavailable or prohibited. This addition provides the requested contextual relevance and justification.",
+        "flaw_addressed_quality": 4,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 8,
+        "is_addressed": false,
+        "start_of_flaw_addressed_text": null,
+        "end_of_flaw_addressed_text": null,
+        "flaw_addressed_description": "The paragraph in 'Prompt Risk Control' discussing the prompt selection logic (argmin(hat R) vs. R) and the 2-stage pipeline description is identical to the submitted version. There is no additional explanation for why optimizing against the bound (hat R) is chosen, especially regarding the potential non-monotonicity with the true risk (R) given limited data. The pipeline description also remains abstract without further concrete examples or practical insights for its application in prompt engineering.",
+        "flaw_addressed_quality": null,
+        "flaw_addressed_confidence": 5
+    },
+    {
+        "flaw_id": 9,
+        "is_addressed": true,
+        "start_of_flaw_addressed_text": "We have chosen the",
+        "end_of_flaw_addressed_text": "in the validation set.",
+        "flaw_addressed_description": "In the 'Tightness of Bounds' discussion, the camera-ready paper explicitly adds: 'In general, all bounds can be characterized as O(1/sqrt(n)) in the size of the validation set.' This provides a direct and more detailed discussion of the sample complexity and how the bounds tighten with increased validation set size, addressing the flaw's request for explicit analysis.",
+        "flaw_addressed_quality": 4,
         "flaw_addressed_confidence": 5
     }
 ]

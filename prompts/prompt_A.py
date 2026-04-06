@@ -39,10 +39,12 @@ Category 5: Failure to Address Limitations or Ethical Concerns
 
 Instructions:
 -------------
+- Combine Multiple Flaws: If multiple flaws occur within the same paragraph or share the same location, combine them into a single overall flaw object representation. Provide a comprehensive `flaw_description` that covers all the issues identified in that location, grouping them into a single flaw so that there is only one flaw per location.
+- Exact Text Matching: Ensure that `start_of_flaw` and `end_of_flaw` are exact, verbatim word-for-word extracts from the paper's visible text. The extracted texts MUST actually exist in the HTML so that they can be explicitly found.
 After you identify all the flaws in the paper, return **a valid JSON array** of objects for all identified flaws. Each object must include:
 - flaw_id: integer id assigned to each assigned flaw
-- start_of_flaw: first 5 words of the paragraph where flaw occurs
-- end_of_flaw: last 5 words of the paragraph where flaw occurs
+- start_of_flaw: exact verbatim extract of the first 5 words of the paragraph where flaw occurs
+- end_of_flaw: exact verbatim extract of the last 5 words of the paragraph where flaw occurs
 - flaw_category: category code (1a–5b) category of the flaw found in the text between start_of_flaw and end_of_flaw
 - flaw_title: title of the flaw that you have given to it
 - flaw_description: detailed description of the flaw in a pargraph form that describes your undestanding of the flaw
